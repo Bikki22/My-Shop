@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Order confirmed — Bazaar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F7F6F2; --paper-raised:#FFFFFF; --navy:#181C2A;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC; --rust:#C6543D; --rust-soft:#F7E1DC;
+    --line:#E7E4DC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  nav{display:flex;align-items:center;gap:9px;padding:16px 48px;background:#fff;border-bottom:1px solid var(--line);}
+  .brand-mark{width:30px;height:30px;border-radius:7px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--navy);font-size:15px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:18px;font-weight:600;}
+
+  .confirm-wrap{max-width:640px;margin:0 auto;padding:60px 24px 80px;text-align:center;}
+  .check-circle{width:76px;height:76px;border-radius:50%;background:var(--teal-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;}
+  h1.confirm-title{font-family:'Fraunces',serif;font-size:30px;font-weight:600;margin-bottom:10px;}
+  .confirm-sub{font-size:14.5px;color:var(--muted);margin-bottom:6px;}
+  .confirm-order{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--navy);margin-bottom:34px;}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;text-align:left;margin-bottom:20px;}
+  .vendor-block{margin-bottom:18px;}
+  .vendor-block:last-child{margin-bottom:0;}
+  .vendor-head{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;margin-bottom:10px;}
+  .vendor-head .eta{margin-left:auto;color:var(--teal);font-weight:600;}
+  .item-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .item-thumb{width:44px;height:44px;border-radius:8px;flex-shrink:0;}
+  .item-name{font-size:13px;font-weight:600;}
+  .item-meta{font-size:11.5px;color:var(--muted);}
+  .item-price{margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:13px;}
+
+  .sum-row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px;}
+  .sum-row span:last-child{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:600;}
+  .sum-divider{border-top:1px solid var(--line);margin:12px 0;}
+  .sum-total{display:flex;justify-content:space-between;font-weight:700;font-size:15px;}
+  .sum-total span:last-child{font-family:'JetBrains Mono',monospace;font-size:17px;}
+
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left;margin-bottom:28px;}
+  .info-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;}
+  .info-label{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);font-weight:600;margin-bottom:8px;}
+  .info-text{font-size:13px;line-height:1.55;}
+
+  .cta-row{display:flex;gap:12px;}
+  .btn-primary{flex:1;background:var(--navy);color:#fff;padding:14px;border-radius:10px;font-weight:700;font-size:14px;border:none;cursor:pointer;}
+  .btn-outline{flex:1;background:none;border:1.5px solid var(--ink);padding:13px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;}
+
+  .whats-next{margin-top:34px;text-align:left;}
+  .whats-next h4{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin-bottom:14px;}
+  .step-row{display:flex;gap:12px;margin-bottom:14px;}
+  .step-num{width:24px;height:24px;border-radius:50%;background:var(--marigold-soft);color:#9C6A17;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .step-text b{display:block;font-size:13px;}
+  .step-text span{font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<nav><div class="brand-mark">B</div><div class="brand-name">Bazaar</div></nav>
+
+<div class="confirm-wrap">
+  <div class="check-circle">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2A8C7F" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+  </div>
+  <h1 class="confirm-title">Order placed successfully!</h1>
+  <div class="confirm-sub">A confirmation has been sent to your phone and email.</div>
+  <div class="confirm-order">Order group #BZ-GRP-88213</div>
+
+  <div class="panel">
+    <div class="vendor-block">
+      <div class="vendor-head">Riya Crafts <span class="eta">Arrives Jul 13–14</span></div>
+      <div class="item-row"><div class="item-thumb" style="background:#FBEBD1;"></div><div><div class="item-name">Dhaka Topi — Ceremonial Red</div><div class="item-meta">Order #BZ-10482 · Qty 1</div></div><div class="item-price">NPR 1,450</div></div>
+      <div class="item-row"><div class="item-thumb" style="background:#F7E1DC;"></div><div><div class="item-name">Embroidered Tote — Terracotta</div><div class="item-meta">Order #BZ-10483 · Qty 1</div></div><div class="item-price">NPR 1,150</div></div>
+    </div>
+    <div class="vendor-block">
+      <div class="vendor-head">Dolakha Bowls <span class="eta">Arrives Jul 15–17</span></div>
+      <div class="item-row"><div class="item-thumb" style="background:#F7E1DC;"></div><div><div class="item-name">Hand-hammered Singing Bowl, 6in</div><div class="item-meta">Order #BZ-10484 · Qty 1</div></div><div class="item-price">NPR 3,600</div></div>
+    </div>
+
+    <div class="sum-divider"></div>
+    <div class="sum-row"><span>Subtotal</span><span>NPR 6,200</span></div>
+    <div class="sum-row"><span>Promo discount</span><span>– NPR 260</span></div>
+    <div class="sum-row"><span>Shipping</span><span>NPR 180</span></div>
+    <div class="sum-divider"></div>
+    <div class="sum-total"><span>Total paid</span><span>NPR 6,120</span></div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-label">Delivery address</div>
+      <div class="info-text">Bikki Chaudhary<br>Ward 3, Katunje Marg<br>Biratnagar, Koshi Province</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Payment method</div>
+      <div class="info-text">eSewa Wallet<br>Transaction ID: <span class="mono">ESW29X81K4</span><br>Paid in full</div>
+    </div>
+  </div>
+
+  <div class="cta-row">
+    <button class="btn-primary">Track my orders</button>
+    <button class="btn-outline">Continue shopping</button>
+  </div>
+
+  <div class="whats-next">
+    <h4>What happens next</h4>
+    <div class="step-row"><div class="step-num">1</div><div class="step-text"><b>Vendors prepare your items</b><span>Riya Crafts and Dolakha Bowls will pack and hand off to courier separately.</span></div></div>
+    <div class="step-row"><div class="step-num">2</div><div class="step-text"><b>You'll get shipping updates</b><span>SMS and in-app notifications as each parcel moves.</span></div></div>
+    <div class="step-row"><div class="step-num">3</div><div class="step-text"><b>Delivered to your door</b><span>Inspect before accepting COD payments where applicable.</span></div></div>
+  </div>
+</div>
+
+</body>
+</html>

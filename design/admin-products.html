@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Products — Bazaar Vendor Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F5F6FA; --paper-raised:#FFFFFF;
+    --navy:#181C2A; --navy-soft:#232841;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC;
+    --rust:#C6543D; --rust-soft:#F7E1DC;
+    --line:#E3E4EC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Fraunces',serif;}
+  a{text-decoration:none;color:inherit;}
+
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh;}
+  .sidebar{background:var(--navy);color:#EDEEF5;padding:28px 20px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:36px;}
+  .brand-mark{width:34px;height:34px;border-radius:8px;background:var(--marigold);display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:700;font-family:'Fraunces',serif;font-size:18px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
+  .brand-sub{font-size:11px;color:#9195AC;margin-top:1px;}
+  .nav-group-label{font-size:10.5px;text-transform:uppercase;letter-spacing:0.09em;color:#7C81A0;margin:18px 4px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;color:#C3C6DA;font-size:14px;font-weight:500;margin-bottom:2px;cursor:pointer;}
+  .nav-item:hover{background:var(--navy-soft);}
+  .nav-item.active{background:var(--navy-soft);color:#fff;box-shadow:inset 3px 0 0 var(--marigold);}
+  .nav-icon{width:17px;height:17px;flex-shrink:0;opacity:0.9;}
+  .sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#E8A33D,#C6543D);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;color:#fff;font-size:14px;}
+  .vendor-name{font-size:13.5px;font-weight:600;color:#EDEEF5;}
+  .vendor-tier{font-size:11px;color:#9195AC;}
+
+  main{padding:30px 36px 60px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;}
+  .page-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;}
+  .page-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+  .btn-primary{background:var(--ink);color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer;}
+
+  .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  .search{flex:1;max-width:320px;display:flex;align-items:center;gap:8px;background:var(--paper-raised);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--muted);}
+  .filter-chip{display:flex;align-items:center;gap:6px;background:var(--paper-raised);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .tab-row{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:0;}
+  .tab{padding:11px 0;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--ink);border-color:var(--marigold);}
+  .tab .count{color:var(--muted);font-weight:500;}
+
+  .panel{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px;}
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:600;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--paper);}
+  td{padding:14px 16px;font-size:13.5px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#FAFAFD;}
+
+  .prod-cell{display:flex;align-items:center;gap:12px;}
+  .prod-thumb{width:44px;height:44px;border-radius:8px;flex-shrink:0;}
+  .prod-name{font-weight:600;}
+  .prod-sku{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+
+  .stock-badge{font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .stock-badge.crit{color:var(--rust);}
+  .stock-badge.warn{color:#9C6A17;}
+  .stock-badge.ok{color:var(--teal);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .badge::before{content:'';width:6px;height:6px;border-radius:50%;}
+  .badge.live{background:var(--teal-soft);color:var(--teal);}
+  .badge.live::before{background:var(--teal);}
+  .badge.draft{background:#EDEDF2;color:var(--muted);}
+  .badge.draft::before{background:var(--muted);}
+  .badge.out{background:var(--rust-soft);color:var(--rust);}
+  .badge.out::before{background:var(--rust);}
+
+  .row-actions{display:flex;gap:8px;}
+  .icon-action{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);}
+  .icon-action:hover{color:var(--ink);border-color:var(--ink);}
+
+  .checkbox-col{width:36px;}
+  input[type=checkbox]{accent-color:var(--marigold);width:15px;height:15px;}
+
+  .pagination-foot{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-size:12.5px;color:var(--muted);}
+  .page-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .page-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">B</div><div><div class="brand-name">Bazaar</div><div class="brand-sub">Vendor Console</div></div></div>
+
+    <div class="nav-group-label">Store</div>
+    <a class="nav-item" href="admin-dashboard.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10l1.5-6h15L21 10M3 10v9a1 1 0 001 1h16a1 1 0 001-1v-9M3 10h18M9 14a2 2 0 104 0"/></svg>Overview</a>
+    <a class="nav-item active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14L12 11m0 12V11m0 0L4 7m0 10V7"/></svg>Products</a>
+    <a class="nav-item" href="admin-orders.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>Orders</a>
+    <a class="nav-item" href="admin-payouts.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5.5c-1.2-1-2.9-1.5-5-1.5-3 0-5 1.3-5 3.5S9 11 12 11s5 1.3 5 3.5-2 3.5-5 3.5c-2.1 0-3.8-.5-5-1.5"/></svg>Payouts</a>
+
+    <div class="nav-group-label">Engagement</div>
+    <a class="nav-item" href="admin-chat.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>Customer Chat</a>
+    <a class="nav-item" href="admin-reviews.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 17.75l-6.16 3.24 1.18-6.88L2 9.24l6.92-1L12 2l3.08 6.24 6.92 1-5.02 4.87 1.18 6.88z"/></svg>Reviews</a>
+
+    <div class="nav-group-label">Configuration</div>
+    <a class="nav-item" href="admin-settings.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Store Settings</a>
+
+    <div class="sidebar-foot">
+      <div class="avatar">RC</div>
+      <div><div class="vendor-name">Riya Crafts</div><div class="vendor-tier">Gold Vendor · Kathmandu</div></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div><div class="page-title">Products</div><div class="page-sub">142 products across 6 categories</div></div>
+      <button class="btn-primary">+ Add product</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Search products or SKU…
+      </div>
+      <div class="filter-chip">Category <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div class="filter-chip">Stock status <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div class="filter-chip">Export</div>
+    </div>
+
+    <div class="tab-row">
+      <div class="tab active">All <span class="count">(142)</span></div>
+      <div class="tab">Live <span class="count">(128)</span></div>
+      <div class="tab">Draft <span class="count">(8)</span></div>
+      <div class="tab">Out of stock <span class="count">(6)</span></div>
+    </div>
+
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th class="checkbox-col"><input type="checkbox"></th>
+            <th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Sales</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><div class="prod-cell"><div class="prod-thumb" style="background:#FBEBD1;"></div><div><div class="prod-name">Dhaka Topi — Ceremonial Red</div><div class="prod-sku">RC-0142</div></div></div></td>
+            <td>Textiles</td>
+            <td class="mono">NPR 1,450</td>
+            <td><span class="stock-badge crit">0 units</span></td>
+            <td><span class="badge out">Out of stock</span></td>
+            <td class="mono">940</td>
+            <td><div class="row-actions"><div class="icon-action">✎</div><div class="icon-action">⋯</div></div></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><div class="prod-cell"><div class="prod-thumb" style="background:#F7E1DC;"></div><div><div class="prod-name">Embroidered Tote — Terracotta</div><div class="prod-sku">RC-0210</div></div></div></td>
+            <td>Bags</td>
+            <td class="mono">NPR 1,150</td>
+            <td><span class="stock-badge warn">3 units</span></td>
+            <td><span class="badge live">Live</span></td>
+            <td class="mono">312</td>
+            <td><div class="row-actions"><div class="icon-action">✎</div><div class="icon-action">⋯</div></div></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><div class="prod-cell"><div class="prod-thumb" style="background:#DCEFEC;"></div><div><div class="prod-name">Handbeaten Copper Tumbler Set</div><div class="prod-sku">RC-0071</div></div></div></td>
+            <td>Home & Ritual</td>
+            <td class="mono">NPR 980</td>
+            <td><span class="stock-badge warn">4 units</span></td>
+            <td><span class="badge live">Live</span></td>
+            <td class="mono">640</td>
+            <td><div class="row-actions"><div class="icon-action">✎</div><div class="icon-action">⋯</div></div></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><div class="prod-cell"><div class="prod-thumb" style="background:#E8E4F5;"></div><div><div class="prod-name">Table Runner — Geometric Weave</div><div class="prod-sku">RC-0033</div></div></div></td>
+            <td>Home & Ritual</td>
+            <td class="mono">NPR 890</td>
+            <td><span class="stock-badge ok">42 units</span></td>
+            <td><span class="badge live">Live</span></td>
+            <td class="mono">88</td>
+            <td><div class="row-actions"><div class="icon-action">✎</div><div class="icon-action">⋯</div></div></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><div class="prod-cell"><div class="prod-thumb" style="background:#FBEBD1;"></div><div><div class="prod-name">Dhaka Topi — Gold Trim</div><div class="prod-sku">RC-0143</div></div></div></td>
+            <td>Textiles</td>
+            <td class="mono">NPR 1,600</td>
+            <td><span class="stock-badge ok">18 units</span></td>
+            <td><span class="badge draft">Draft</span></td>
+            <td class="mono">0</td>
+            <td><div class="row-actions"><div class="icon-action">✎</div><div class="icon-action">⋯</div></div></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox"></td>
+            <td><div class="prod-cell"><div class="prod-thumb" style="background:#F7E1DC;"></div><div><div class="prod-name">Pashmina Shawl — Charcoal</div><div class="prod-sku">RC-0098</div></div></div></td>
+            <td>Textiles</td>
+            <td class="mono">NPR 3,200</td>
+            <td><span class="stock-badge crit">0 units</span></td>
+            <td><span class="badge out">Out of stock</span></td>
+            <td class="mono">211</td>
+            <td><div class="row-actions"><div class="icon-action">✎</div><div class="icon-action">⋯</div></div></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pagination-foot">
+        <span>Showing 1–6 of 142 products</span>
+        <div style="display:flex;gap:6px;">
+          <div class="page-btn">←</div><div class="page-btn active">1</div><div class="page-btn">2</div><div class="page-btn">3</div><div class="page-btn">→</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

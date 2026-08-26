@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Page not found — Bazaar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F7F6F2; --navy:#181C2A;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1; --teal:#2A8C7F;
+    --rust:#C6543D; --line:#E7E4DC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+  a{color:inherit;text-decoration:none;}
+  nav{display:flex;align-items:center;gap:9px;padding:16px 48px;background:#fff;border-bottom:1px solid var(--line);}
+  .brand-mark{width:30px;height:30px;border-radius:7px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--navy);font-size:15px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:18px;font-weight:600;}
+
+  .wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:60px 24px;}
+  .content{text-align:center;max-width:460px;}
+  .illus{margin:0 auto 26px;}
+  .code{font-family:'Fraunces',serif;font-size:76px;font-weight:700;color:var(--marigold);line-height:1;margin-bottom:6px;}
+  h1{font-family:'Fraunces',serif;font-size:24px;font-weight:600;margin-bottom:10px;}
+  p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:28px;}
+  .cta-row{display:flex;gap:12px;justify-content:center;}
+  .btn-primary{background:var(--navy);color:#fff;padding:12px 22px;border-radius:9px;font-weight:700;font-size:13.5px;border:none;cursor:pointer;}
+  .btn-outline{background:none;border:1.5px solid var(--ink);padding:11px 22px;border-radius:9px;font-weight:700;font-size:13.5px;cursor:pointer;}
+
+  .search-suggest{margin-top:34px;font-size:12.5px;color:var(--muted);}
+  .search-suggest span{color:var(--teal);font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<nav><div class="brand-mark">B</div><div class="brand-name">Bazaar</div></nav>
+
+<div class="wrap">
+  <div class="content">
+    <svg class="illus" width="140" height="100" viewBox="0 0 140 100">
+      <ellipse cx="70" cy="88" rx="50" ry="8" fill="#E7E4DC"/>
+      <rect x="30" y="30" width="80" height="55" rx="8" fill="#FBEBD1"/>
+      <path d="M40 30v-10a30 30 0 0160 0v10" stroke="#E8A33D" stroke-width="6" fill="none"/>
+      <circle cx="55" cy="55" r="4" fill="#181C2A"/>
+      <circle cx="85" cy="55" r="4" fill="#181C2A"/>
+      <path d="M58 68q12 8 24 0" stroke="#181C2A" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="code">404</div>
+    <h1>This stall seems to have packed up</h1>
+    <p>The page you're looking for doesn't exist, was moved, or the vendor may have taken this listing down.</p>
+    <div class="cta-row">
+      <button class="btn-primary">Back to homepage</button>
+      <button class="btn-outline">Browse categories</button>
+    </div>
+    <div class="search-suggest">Looking for something specific? <span>Search the marketplace →</span></div>
+  </div>
+</div>
+
+</body>
+</html>

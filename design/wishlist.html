@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wishlist — Bazaar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F7F6F2; --navy:#181C2A;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1; --teal:#2A8C7F;
+    --rust:#C6543D; --line:#E7E4DC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  nav{display:flex;align-items:center;gap:9px;padding:16px 48px;background:#fff;border-bottom:1px solid var(--line);}
+  .brand-mark{width:30px;height:30px;border-radius:7px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--navy);font-size:15px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:18px;font-weight:600;}
+
+  h1.page-title{font-family:'Fraunces',serif;font-size:28px;font-weight:600;padding:26px 48px 4px;}
+  .page-sub{padding:0 48px 20px;font-size:13.5px;color:var(--muted);}
+  .layout{display:grid;grid-template-columns:200px 1fr;gap:26px;padding:0 48px 60px;}
+  .side-nav a{display:block;padding:10px 14px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--muted);margin-bottom:4px;}
+  .side-nav a.active{background:var(--navy);color:#fff;}
+
+  .product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .product-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .product-thumb{height:170px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .remove-heart{position:absolute;top:10px;right:10px;width:30px;height:30px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.12);color:var(--rust);cursor:pointer;}
+  .stock-flag{position:absolute;top:10px;left:10px;background:var(--rust);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:5px;}
+  .product-info{padding:14px;}
+  .p-vendor{font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .p-name{font-size:13.5px;font-weight:600;margin-bottom:8px;}
+  .p-price-row{display:flex;align-items:center;justify-content:space-between;}
+  .p-price{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14.5px;}
+  .btn-add{background:var(--navy);color:#fff;border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+  .btn-add.disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<nav><div class="brand-mark">B</div><div class="brand-name">Bazaar</div></nav>
+
+<h1 class="page-title">Wishlist</h1>
+<div class="page-sub">7 items saved · we'll let you know if prices drop.</div>
+
+<div class="layout">
+  <div class="side-nav">
+    <a href="order-tracking.html">My orders</a>
+    <a href="addresses.html">Addresses</a>
+    <a>Payment methods</a>
+    <a class="active">Wishlist</a>
+    <a>Reviews given</a>
+    <a href="account-settings.html">Account settings</a>
+  </div>
+
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="product-thumb" style="background:#E8E4F5;"><div class="remove-heart">♥</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><rect x="20" y="35" width="60" height="45" rx="6" fill="#181C2A"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Himalayan Looms</div><div class="p-name">Handwoven Shoulder Bag — Indigo</div>
+        <div class="p-price-row"><span class="p-price">NPR 1,650</span><button class="btn-add">Add to cart</button></div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#FBEBD1;"><div class="remove-heart">♥</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><path d="M20 70 Q50 15 80 70" stroke="#C6543D" stroke-width="8" fill="none" stroke-linecap="round"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Riya Crafts</div><div class="p-name">Dhaka Topi — Gold Trim</div>
+        <div class="p-price-row"><span class="p-price">NPR 1,600</span><button class="btn-add">Add to cart</button></div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#F7E1DC;"><div class="stock-flag">Out of stock</div><div class="remove-heart">♥</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="55" r="26" fill="#C6543D"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Dolakha Bowls</div><div class="p-name">Singing Bowl, 8in — Deep Tone</div>
+        <div class="p-price-row"><span class="p-price">NPR 5,200</span><button class="btn-add disabled">Notify me</button></div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#DCEFEC;"><div class="remove-heart">♥</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="30" ry="16" fill="#2A8C7F"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Newari Metalworks</div><div class="p-name">Brass Ritual Lamp — Small</div>
+        <div class="p-price-row"><span class="p-price">NPR 1,340</span><button class="btn-add">Add to cart</button></div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#F7E1DC;"><div class="remove-heart">♥</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><path d="M15 40h70v35a5 5 0 01-5 5H20a5 5 0 01-5-5z" fill="#C6543D"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Riya Crafts</div><div class="p-name">Embroidered Tote — Forest Green</div>
+        <div class="p-price-row"><span class="p-price">NPR 1,150</span><button class="btn-add">Add to cart</button></div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#FBEBD1;"><div class="remove-heart">♥</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="#E8A33D"/><circle cx="50" cy="50" r="12" fill="#F7F6F2"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Himalayan Looms</div><div class="p-name">Pashmina Shawl — Marigold</div>
+        <div class="p-price-row"><span class="p-price">NPR 3,200</span><button class="btn-add">Add to cart</button></div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Store Settings — Bazaar Vendor Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F5F6FA; --paper-raised:#FFFFFF;
+    --navy:#181C2A; --navy-soft:#232841;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC;
+    --rust:#C6543D; --rust-soft:#F7E1DC;
+    --line:#E3E4EC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{text-decoration:none;color:inherit;}
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh;}
+  .sidebar{background:var(--navy);color:#EDEEF5;padding:28px 20px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:36px;}
+  .brand-mark{width:34px;height:34px;border-radius:8px;background:var(--marigold);display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:700;font-family:'Fraunces',serif;font-size:18px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
+  .brand-sub{font-size:11px;color:#9195AC;margin-top:1px;}
+  .nav-group-label{font-size:10.5px;text-transform:uppercase;letter-spacing:0.09em;color:#7C81A0;margin:18px 4px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;color:#C3C6DA;font-size:14px;font-weight:500;margin-bottom:2px;cursor:pointer;}
+  .nav-item:hover{background:var(--navy-soft);}
+  .nav-item.active{background:var(--navy-soft);color:#fff;box-shadow:inset 3px 0 0 var(--marigold);}
+  .nav-icon{width:17px;height:17px;flex-shrink:0;opacity:0.9;}
+  .sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#E8A33D,#C6543D);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;color:#fff;font-size:14px;}
+  .vendor-name{font-size:13.5px;font-weight:600;color:#EDEEF5;}
+  .vendor-tier{font-size:11px;color:#9195AC;}
+
+  main{padding:30px 36px 60px;}
+  .page-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;margin-bottom:4px;}
+  .page-sub{font-size:13px;color:var(--muted);margin-bottom:26px;}
+
+  .layout{display:grid;grid-template-columns:200px 1fr;gap:30px;}
+  .settings-nav a{display:block;padding:10px 14px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--muted);margin-bottom:4px;}
+  .settings-nav a.active{background:#fff;color:var(--ink);border:1px solid var(--line);}
+
+  .panel{background:var(--paper-raised);border:1px solid var(--line);border-radius:14px;padding:24px;margin-bottom:20px;}
+  .panel-title{font-family:'Fraunces',serif;font-size:17px;font-weight:600;margin-bottom:4px;}
+  .panel-desc{font-size:12.5px;color:var(--muted);margin-bottom:20px;}
+
+  .store-header{display:flex;align-items:center;gap:16px;margin-bottom:22px;}
+  .store-logo{width:72px;height:72px;border-radius:14px;background:linear-gradient(135deg,#E8A33D,#C6543D);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:#fff;font-size:26px;}
+  .btn-outline-sm{padding:8px 14px;border-radius:8px;border:1.5px solid var(--ink);background:none;font-size:12.5px;font-weight:600;cursor:pointer;}
+
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .form-field{display:flex;flex-direction:column;gap:6px;}
+  .form-field.full{grid-column:1/3;}
+  .form-field label{font-size:12px;font-weight:600;color:var(--muted);}
+  .form-field input, .form-field select, .form-field textarea{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:inherit;}
+  .form-field textarea{resize:vertical;min-height:70px;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);}
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle-name{font-size:13.5px;font-weight:600;}
+  .toggle-desc{font-size:12px;color:var(--muted);margin-top:2px;}
+  .switch{width:42px;height:24px;background:var(--line);border-radius:14px;position:relative;cursor:pointer;flex-shrink:0;}
+  .switch.on{background:var(--teal);}
+  .switch::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .15s;}
+  .switch.on::after{left:21px;}
+
+  .btn-save{background:var(--ink);color:#fff;border:none;border-radius:9px;padding:11px 22px;font-size:13.5px;font-weight:600;cursor:pointer;}
+
+  .policy-list{display:flex;flex-direction:column;gap:10px;}
+  .policy-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--line);border-radius:9px;}
+  .policy-item .pname{font-size:13px;font-weight:600;}
+  .policy-item .pval{font-size:12.5px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">B</div><div><div class="brand-name">Bazaar</div><div class="brand-sub">Vendor Console</div></div></div>
+    <div class="nav-group-label">Store</div>
+    <a class="nav-item" href="admin-dashboard.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10l1.5-6h15L21 10M3 10v9a1 1 0 001 1h16a1 1 0 001-1v-9M3 10h18M9 14a2 2 0 104 0"/></svg>Overview</a>
+    <a class="nav-item" href="admin-products.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14L12 11m0 12V11m0 0L4 7m0 10V7"/></svg>Products</a>
+    <a class="nav-item" href="admin-orders.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>Orders</a>
+    <a class="nav-item" href="admin-payouts.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5.5c-1.2-1-2.9-1.5-5-1.5-3 0-5 1.3-5 3.5S9 11 12 11s5 1.3 5 3.5-2 3.5-5 3.5c-2.1 0-3.8-.5-5-1.5"/></svg>Payouts</a>
+    <div class="nav-group-label">Engagement</div>
+    <a class="nav-item" href="admin-chat.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>Customer Chat</a>
+    <a class="nav-item" href="admin-reviews.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 17.75l-6.16 3.24 1.18-6.88L2 9.24l6.92-1L12 2l3.08 6.24 6.92 1-5.02 4.87 1.18 6.88z"/></svg>Reviews</a>
+    <div class="nav-group-label">Configuration</div>
+    <a class="nav-item active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Store Settings</a>
+    <div class="sidebar-foot"><div class="avatar">RC</div><div><div class="vendor-name">Riya Crafts</div><div class="vendor-tier">Gold Vendor · Kathmandu</div></div></div>
+  </aside>
+
+  <main>
+    <div class="page-title">Store settings</div>
+    <div class="page-sub">Manage your storefront profile, shipping rules, and notification preferences</div>
+
+    <div class="layout">
+      <div class="settings-nav">
+        <a class="active">Store profile</a>
+        <a>Shipping & returns</a>
+        <a>Payment & payouts</a>
+        <a>Notifications</a>
+        <a>Team members</a>
+        <a>Danger zone</a>
+      </div>
+
+      <div>
+        <!-- STORE PROFILE -->
+        <div class="panel">
+          <div class="panel-title">Store profile</div>
+          <div class="panel-desc">This is how buyers see your store across Bazaar.</div>
+
+          <div class="store-header">
+            <div class="store-logo">RC</div>
+            <button class="btn-outline-sm">Change logo</button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field"><label>Store name</label><input value="Riya Crafts"></div>
+            <div class="form-field"><label>Store handle</label><input value="@riyacrafts"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field"><label>Location</label><input value="Kathmandu, Bagmati Province"></div>
+            <div class="form-field"><label>Support phone</label><input value="+977 98XXXXXXXX"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field full"><label>Store description</label><textarea>Three generations of hand-loomed Dhaka textiles from Kathmandu, made the traditional way — one thread at a time.</textarea></div>
+          </div>
+        </div>
+
+        <!-- SHIPPING -->
+        <div class="panel">
+          <div class="panel-title">Shipping & returns</div>
+          <div class="panel-desc">Applies to all products unless overridden individually.</div>
+
+          <div class="form-row">
+            <div class="form-field"><label>Ships from</label><input value="Kathmandu, Bagmati"></div>
+            <div class="form-field"><label>Standard processing time</label><select><option>1–2 business days</option><option>2–4 business days</option><option>4–7 business days</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field"><label>Return window</label><select><option>7 days</option><option>14 days</option><option>No returns</option></select></div>
+            <div class="form-field"><label>Flat shipping rate (Valley)</label><input value="NPR 100"></div>
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div class="panel">
+          <div class="panel-title">Notifications</div>
+          <div class="panel-desc">Choose what you're alerted about, and how.</div>
+
+          <div class="toggle-row"><div><div class="toggle-name">New order received</div><div class="toggle-desc">SMS + email notification</div></div><div class="switch on"></div></div>
+          <div class="toggle-row"><div><div class="toggle-name">Low stock alerts</div><div class="toggle-desc">When any product drops below 5 units</div></div><div class="switch on"></div></div>
+          <div class="toggle-row"><div><div class="toggle-name">Customer messages</div><div class="toggle-desc">Push notification for new chat messages</div></div><div class="switch on"></div></div>
+          <div class="toggle-row"><div><div class="toggle-name">Weekly performance summary</div><div class="toggle-desc">Every Monday morning</div></div><div class="switch"></div></div>
+          <div class="toggle-row"><div><div class="toggle-name">Marketing tips from Bazaar</div><div class="toggle-desc">Occasional seller growth suggestions</div></div><div class="switch"></div></div>
+        </div>
+
+        <button class="btn-save">Save changes</button>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

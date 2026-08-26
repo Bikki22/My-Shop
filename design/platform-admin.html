@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Platform Ops — Bazaar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D12; --panel:#12151D; --panel-raised:#171B25;
+    --line:#232837; --line-soft:#1B2029;
+    --ink:#E7E9F0; --muted:#7C8399; --dim:#565D70;
+    --amber:#F0A63A; --red:#E5584D; --green:#3FC98A; --cyan:#4FB8E8; --purple:#9D7FE8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{text-decoration:none;color:inherit;}
+
+  .app{display:grid;grid-template-columns:60px 1fr;min-height:100vh;}
+
+  /* ---- ICON RAIL (deliberately unlabeled, dense — distinct from vendor's labeled sidebar) ---- */
+  .rail{background:#08090D;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;align-items:center;padding:20px 0;gap:6px;position:sticky;top:0;height:100vh;}
+  .rail-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--purple),#5B3FA0);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#fff;font-size:15px;margin-bottom:22px;}
+  .rail-item{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer;position:relative;}
+  .rail-item:hover{background:var(--panel-raised);color:var(--ink);}
+  .rail-item.active{background:var(--panel-raised);color:var(--purple);box-shadow:inset 0 0 0 1px rgba(157,127,232,0.35);}
+  .rail-item .dot{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--red);}
+  .rail-spacer{flex:1;}
+  .rail-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#9D7FE8,#181C2A);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#fff;font-size:12px;}
+
+  main{padding:22px 32px 60px;}
+
+  /* ---- TOP COMMAND BAR ---- */
+  .cmd-bar{display:flex;align-items:center;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--line-soft);margin-bottom:20px;}
+  .breadcrumb{font-size:12px;color:var(--dim);}
+  .breadcrumb b{color:var(--ink);font-weight:600;}
+  .env-pill{display:flex;align-items:center;gap:6px;background:rgba(63,201,138,0.12);color:var(--green);font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;}
+  .env-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(63,201,138,0.18);}
+  .cmd-search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--dim);font-size:12.5px;}
+  .cmd-search kbd{margin-left:auto;background:var(--line-soft);color:var(--dim);font-size:10px;padding:2px 6px;border-radius:4px;font-family:'IBM Plex Mono',monospace;}
+  .cmd-actions{display:flex;align-items:center;gap:14px;margin-left:auto;}
+  .bell{position:relative;color:var(--dim);cursor:pointer;}
+  .bell .badge{position:absolute;top:-6px;right:-7px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;}
+  .admin-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);}
+
+  /* ---- SYSTEM STATUS STRIP ---- */
+  .status-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:22px;}
+  .status-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px;}
+  .status-top{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .status-dot.ok{background:var(--green);box-shadow:0 0 0 3px rgba(63,201,138,0.15);}
+  .status-dot.warn{background:var(--amber);box-shadow:0 0 0 3px rgba(240,166,58,0.15);}
+  .status-name{font-size:11.5px;color:var(--muted);font-weight:500;}
+  .status-value{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;}
+  .status-sub{font-size:10.5px;color:var(--dim);margin-top:2px;}
+
+  /* ---- KPI ROW ---- */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+  .kpi-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;}
+  .kpi-label{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:600;}
+  .kpi-spark{margin-top:10px;}
+  .kpi-delta{font-size:11px;margin-top:6px;}
+  .kpi-delta.up{color:var(--green);}
+  .kpi-delta.down{color:var(--red);}
+  .kpi-delta.flag{color:var(--red);font-weight:600;}
+
+  .grid-main{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .panel-title{font-family:'Space Grotesk',sans-serif;font-size:15.5px;font-weight:600;}
+  .panel-link{font-size:11.5px;color:var(--purple);font-weight:600;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim);font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--line-soft);}
+  td{padding:11px 10px;font-size:12.5px;border-bottom:1px solid var(--line-soft);}
+  tr:last-child td{border-bottom:none;}
+  .vendor-cell{display:flex;align-items:center;gap:9px;}
+  .v-avatar{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;}
+  .v-name{font-weight:600;color:var(--ink);}
+  .v-loc{font-size:10.5px;color:var(--dim);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:10.5px;font-weight:600;}
+  .badge::before{content:'';width:5px;height:5px;border-radius:50%;}
+  .badge.pending{background:rgba(240,166,58,0.12);color:var(--amber);}
+  .badge.pending::before{background:var(--amber);}
+  .badge.urgent{background:rgba(229,88,77,0.12);color:var(--red);}
+  .badge.urgent::before{background:var(--red);}
+  .badge.review{background:rgba(157,127,232,0.14);color:var(--purple);}
+  .badge.review::before{background:var(--purple);}
+
+  .btn-mini{padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-raised);color:var(--ink);font-size:11px;font-weight:600;cursor:pointer;}
+  .btn-mini.approve{background:rgba(63,201,138,0.15);color:var(--green);border-color:rgba(63,201,138,0.3);}
+  .btn-mini.reject{background:rgba(229,88,77,0.1);color:var(--red);border-color:rgba(229,88,77,0.25);}
+
+  .dispute-item{border-bottom:1px solid var(--line-soft);padding:12px 0;}
+  .dispute-item:last-child{border:none;}
+  .dispute-top{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+  .dispute-id{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;color:var(--ink);}
+  .dispute-text{font-size:12px;color:var(--muted);line-height:1.5;}
+  .dispute-meta{font-size:10.5px;color:var(--dim);margin-top:5px;}
+
+  /* ---- AUDIT LOG (new — reinforces accountability/ops framing) ---- */
+  .audit-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-soft);align-items:flex-start;}
+  .audit-row:last-child{border:none;}
+  .audit-time{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--dim);width:52px;flex-shrink:0;padding-top:1px;}
+  .audit-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .audit-text{font-size:12px;color:var(--muted);line-height:1.5;}
+  .audit-text b{color:var(--ink);font-weight:600;}
+
+  .chart-wrap{height:150px;}
+  .cat-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+  .cat-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+  .cat-dot{width:8px;height:8px;border-radius:2px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ICON RAIL -->
+  <aside class="rail">
+    <div class="rail-logo">B</div>
+    <div class="rail-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+    <div class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/></svg><div class="dot"></div></div>
+    <div class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/></svg></div>
+    <div class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><div class="dot"></div></div>
+    <div class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5.5c-1.2-1-2.9-1.5-5-1.5-3 0-5 1.3-5 3.5S9 11 12 11s5 1.3 5 3.5-2 3.5-5 3.5c-2.1 0-3.8-.5-5-1.5"/></svg></div>
+    <div class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg></div>
+    <div class="rail-spacer"></div>
+    <div class="rail-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82"/></svg></div>
+    <div class="rail-avatar">SA</div>
+  </aside>
+
+  <main>
+    <!-- COMMAND BAR -->
+    <div class="cmd-bar">
+      <div class="breadcrumb">Bazaar / <b>Platform Ops</b></div>
+      <div class="env-pill">Production</div>
+      <div class="cmd-search">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Search vendors, orders, disputes…
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="cmd-actions">
+        <div class="bell"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><div class="badge">10</div></div>
+        <div class="admin-chip">Sabin Adhikari · Superuser</div>
+      </div>
+    </div>
+
+    <!-- SYSTEM STATUS -->
+    <div class="status-strip">
+      <div class="status-card"><div class="status-top"><div class="status-dot ok"></div><div class="status-name">eSewa gateway</div></div><div class="status-value">200ms</div><div class="status-sub">p95 latency · healthy</div></div>
+      <div class="status-card"><div class="status-top"><div class="status-dot ok"></div><div class="status-name">Khalti gateway</div></div><div class="status-value">184ms</div><div class="status-sub">p95 latency · healthy</div></div>
+      <div class="status-card"><div class="status-top"><div class="status-dot warn"></div><div class="status-name">Job queue (BullMQ)</div></div><div class="status-value">1,204</div><div class="status-sub">jobs pending · above normal</div></div>
+      <div class="status-card"><div class="status-top"><div class="status-dot ok"></div><div class="status-name">Search index</div></div><div class="status-value">synced</div><div class="status-sub">last sync 40s ago</div></div>
+      <div class="status-card"><div class="status-top"><div class="status-dot warn"></div><div class="status-name">Webhook failures</div></div><div class="status-value">3</div><div class="status-sub">in the last hour</div></div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">GMV this month</div>
+        <div class="kpi-value mono">NPR 2.14Cr</div>
+        <svg class="kpi-spark" width="100%" height="24" viewBox="0 0 120 24"><polyline points="0,18 20,15 40,17 60,10 80,12 100,4 120,6" fill="none" stroke="#3FC98A" stroke-width="2"/></svg>
+        <div class="kpi-delta up">↑ 9.2% vs last month</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Active vendors</div>
+        <div class="kpi-value mono">1,240</div>
+        <svg class="kpi-spark" width="100%" height="24" viewBox="0 0 120 24"><polyline points="0,16 20,14 40,15 60,11 80,9 100,7 120,5" fill="none" stroke="#4FB8E8" stroke-width="2"/></svg>
+        <div class="kpi-delta up">↑ 18 this week</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Orders today</div>
+        <div class="kpi-value mono">1,842</div>
+        <svg class="kpi-spark" width="100%" height="24" viewBox="0 0 120 24"><polyline points="0,10 20,14 40,8 60,12 80,6 100,9 120,4" fill="none" stroke="#3FC98A" stroke-width="2"/></svg>
+        <div class="kpi-delta up">↑ 6.4%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Take rate (avg)</div>
+        <div class="kpi-value mono">4.6%</div>
+        <svg class="kpi-spark" width="100%" height="24" viewBox="0 0 120 24"><polyline points="0,10 20,11 40,9 60,10 80,11 100,9 120,10" fill="none" stroke="#7C8399" stroke-width="2"/></svg>
+        <div class="kpi-delta">Stable</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Open disputes</div>
+        <div class="kpi-value mono" style="color:var(--red);">7</div>
+        <svg class="kpi-spark" width="100%" height="24" viewBox="0 0 120 24"><polyline points="0,14 20,12 40,15 60,10 80,12 100,8 120,10" fill="none" stroke="#E5584D" stroke-width="2"/></svg>
+        <div class="kpi-delta flag">3 need review today</div>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <!-- VENDOR APPROVALS -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Vendor approval queue</div><a class="panel-link" href="#">view all (12) →</a></div>
+        <table>
+          <thead><tr><th>Vendor</th><th>Category</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="vendor-cell"><div class="v-avatar" style="background:linear-gradient(135deg,#E8A33D,#C6543D);">SM</div><div><div class="v-name">Sundar Metalworks</div><div class="v-loc">Bhaktapur</div></div></div></td>
+              <td>Pottery & Metal</td><td class="mono" style="color:var(--dim);">2h ago</td>
+              <td><span class="badge pending">Pending</span></td>
+              <td><div style="display:flex;gap:6px;"><button class="btn-mini approve">Approve</button><button class="btn-mini reject">Reject</button></div></td>
+            </tr>
+            <tr>
+              <td><div class="vendor-cell"><div class="v-avatar" style="background:linear-gradient(135deg,#2A8C7F,#181C2A);">TW</div><div><div class="v-name">Thamel Woolworks</div><div class="v-loc">Kathmandu</div></div></div></td>
+              <td>Textiles</td><td class="mono" style="color:var(--dim);">5h ago</td>
+              <td><span class="badge pending">Pending</span></td>
+              <td><div style="display:flex;gap:6px;"><button class="btn-mini approve">Approve</button><button class="btn-mini reject">Reject</button></div></td>
+            </tr>
+            <tr>
+              <td><div class="vendor-cell"><div class="v-avatar" style="background:linear-gradient(135deg,#C6543D,#181C2A);">JB</div><div><div class="v-name">Janakpur Bags Co.</div><div class="v-loc">Janakpur</div></div></div></td>
+              <td>Bags</td><td class="mono" style="color:var(--dim);">1d ago</td>
+              <td><span class="badge review">Docs requested</span></td>
+              <td><div style="display:flex;gap:6px;"><button class="btn-mini">Message</button></div></td>
+            </tr>
+            <tr>
+              <td><div class="vendor-cell"><div class="v-avatar" style="background:linear-gradient(135deg,#E8A33D,#2A8C7F);">PL</div><div><div class="v-name">Pokhara Leatherworks</div><div class="v-loc">Pokhara</div></div></div></td>
+              <td>Bags</td><td class="mono" style="color:var(--dim);">2d ago</td>
+              <td><span class="badge pending">Pending</span></td>
+              <td><div style="display:flex;gap:6px;"><button class="btn-mini approve">Approve</button><button class="btn-mini reject">Reject</button></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- DISPUTES -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Escalated disputes</div><a class="panel-link" href="#">view all (7) →</a></div>
+        <div class="dispute-item">
+          <div class="dispute-top"><span class="dispute-id">#DSP-0231</span><span class="badge urgent">Urgent</span></div>
+          <div class="dispute-text">Buyer claims item not as described — Singing Bowl order #BZ-10479, Dolakha Bowls.</div>
+          <div class="dispute-meta">Escalated 3h ago · no vendor response yet</div>
+        </div>
+        <div class="dispute-item">
+          <div class="dispute-top"><span class="dispute-id">#DSP-0229</span><span class="badge review">In review</span></div>
+          <div class="dispute-text">Refund requested outside 7-day window — vendor disputes eligibility.</div>
+          <div class="dispute-meta">Escalated yesterday · awaiting your decision</div>
+        </div>
+        <div class="dispute-item">
+          <div class="dispute-top"><span class="dispute-id">#DSP-0224</span><span class="badge review">In review</span></div>
+          <div class="dispute-text">Duplicate charge reported on eSewa — payment gateway reconciliation needed.</div>
+          <div class="dispute-meta">Escalated 2d ago</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <!-- CATEGORY CHART -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">GMV by category, this month</div><a class="panel-link" href="#">full report →</a></div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 560 150" width="100%" height="150" preserveAspectRatio="none">
+            <line x1="0" y1="20" x2="560" y2="20" stroke="#232837"/><line x1="0" y1="70" x2="560" y2="70" stroke="#232837"/><line x1="0" y1="120" x2="560" y2="120" stroke="#232837"/>
+            <g fill="#F0A63A"><rect x="15" y="35" width="55" height="105" rx="4"/></g>
+            <g fill="#3FC98A"><rect x="100" y="55" width="55" height="85" rx="4"/></g>
+            <g fill="#9D7FE8"><rect x="185" y="25" width="55" height="115" rx="4"/></g>
+            <g fill="#E5584D"><rect x="270" y="75" width="55" height="65" rx="4"/></g>
+            <g fill="#4FB8E8"><rect x="355" y="50" width="55" height="90" rx="4"/></g>
+            <g fill="#F0A63A" opacity="0.45"><rect x="440" y="95" width="55" height="45" rx="4"/></g>
+          </svg>
+        </div>
+        <div class="cat-legend">
+          <div class="cat-legend-item"><div class="cat-dot" style="background:#F0A63A;"></div>Textiles — NPR 68L</div>
+          <div class="cat-legend-item"><div class="cat-dot" style="background:#3FC98A;"></div>Pottery & Metal — NPR 42L</div>
+          <div class="cat-legend-item"><div class="cat-dot" style="background:#9D7FE8;"></div>Jewelry — NPR 51L</div>
+          <div class="cat-legend-item"><div class="cat-dot" style="background:#E5584D;"></div>Home & Ritual — NPR 28L</div>
+          <div class="cat-legend-item"><div class="cat-dot" style="background:#4FB8E8;"></div>Bags — NPR 38L</div>
+          <div class="cat-legend-item"><div class="cat-dot" style="background:#F0A63A;opacity:0.45;"></div>Instruments — NPR 17L</div>
+        </div>
+      </div>
+
+      <!-- AUDIT LOG -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Admin action log</div><a class="panel-link" href="#">full log →</a></div>
+        <div class="audit-row"><div class="audit-time">10:41</div><div class="audit-dot" style="background:var(--green);"></div><div class="audit-text"><b>Sabin A.</b> approved vendor <b>Newari Metalworks</b></div></div>
+        <div class="audit-row"><div class="audit-time">10:12</div><div class="audit-dot" style="background:var(--red);"></div><div class="audit-text"><b>Sabin A.</b> resolved dispute <b>#DSP-0219</b> in favor of buyer</div></div>
+        <div class="audit-row"><div class="audit-time">09:55</div><div class="audit-dot" style="background:var(--amber);"></div><div class="audit-text"><b>System</b> flagged <b>3 webhook failures</b> on eSewa callback</div></div>
+        <div class="audit-row"><div class="audit-time">09:30</div><div class="audit-dot" style="background:var(--purple);"></div><div class="audit-text"><b>Anita R.</b> updated commission rate for <b>Gold tier</b> to 4%</div></div>
+        <div class="audit-row"><div class="audit-time">08:47</div><div class="audit-dot" style="background:var(--green);"></div><div class="audit-text"><b>Sabin A.</b> approved vendor <b>Palpa Handloom Co-op</b></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

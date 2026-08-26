@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Orders — Bazaar Vendor Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F5F6FA; --paper-raised:#FFFFFF;
+    --navy:#181C2A; --navy-soft:#232841;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC;
+    --rust:#C6543D; --rust-soft:#F7E1DC;
+    --line:#E3E4EC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{text-decoration:none;color:inherit;}
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh;}
+  .sidebar{background:var(--navy);color:#EDEEF5;padding:28px 20px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:36px;}
+  .brand-mark{width:34px;height:34px;border-radius:8px;background:var(--marigold);display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:700;font-family:'Fraunces',serif;font-size:18px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
+  .brand-sub{font-size:11px;color:#9195AC;margin-top:1px;}
+  .nav-group-label{font-size:10.5px;text-transform:uppercase;letter-spacing:0.09em;color:#7C81A0;margin:18px 4px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;color:#C3C6DA;font-size:14px;font-weight:500;margin-bottom:2px;cursor:pointer;}
+  .nav-item:hover{background:var(--navy-soft);}
+  .nav-item.active{background:var(--navy-soft);color:#fff;box-shadow:inset 3px 0 0 var(--marigold);}
+  .nav-icon{width:17px;height:17px;flex-shrink:0;opacity:0.9;}
+  .sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#E8A33D,#C6543D);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;color:#fff;font-size:14px;}
+  .vendor-name{font-size:13.5px;font-weight:600;color:#EDEEF5;}
+  .vendor-tier{font-size:11px;color:#9195AC;}
+
+  main{padding:30px 36px 60px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;}
+  .page-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;}
+  .page-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+  .btn-primary{background:var(--ink);color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer;}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px;}
+  .stat-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+  .stat-label{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:8px;}
+  .stat-value{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;}
+
+  .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  .search{flex:1;max-width:320px;display:flex;align-items:center;gap:8px;background:var(--paper-raised);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--muted);}
+  .filter-chip{display:flex;align-items:center;gap:6px;background:var(--paper-raised);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .tab-row{display:flex;gap:22px;border-bottom:1px solid var(--line);}
+  .tab{padding:11px 0;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--ink);border-color:var(--marigold);}
+  .tab .count{color:var(--muted);font-weight:500;}
+
+  .panel{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px;}
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:600;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--paper);}
+  td{padding:14px 16px;font-size:13.5px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#FAFAFD;}
+  .order-id{font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .cust{font-size:12px;color:var(--muted);}
+  .amt{font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .badge::before{content:'';width:6px;height:6px;border-radius:50%;}
+  .badge.paid{background:var(--teal-soft);color:var(--teal);}
+  .badge.paid::before{background:var(--teal);}
+  .badge.pending{background:var(--marigold-soft);color:#9C6A17;}
+  .badge.pending::before{background:var(--marigold);}
+  .badge.shipped{background:#E8E4F5;color:#5B3FA0;}
+  .badge.shipped::before{background:#5B3FA0;}
+  .badge.cancelled{background:var(--rust-soft);color:var(--rust);}
+  .badge.cancelled::before{background:var(--rust);}
+
+  .row-actions{display:flex;gap:8px;}
+  .btn-mini{padding:6px 12px;border-radius:7px;border:1px solid var(--line);background:#fff;font-size:12px;font-weight:600;cursor:pointer;}
+  .btn-mini.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .pagination-foot{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-size:12.5px;color:var(--muted);}
+  .page-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .page-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">B</div><div><div class="brand-name">Bazaar</div><div class="brand-sub">Vendor Console</div></div></div>
+    <div class="nav-group-label">Store</div>
+    <a class="nav-item" href="admin-dashboard.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10l1.5-6h15L21 10M3 10v9a1 1 0 001 1h16a1 1 0 001-1v-9M3 10h18M9 14a2 2 0 104 0"/></svg>Overview</a>
+    <a class="nav-item" href="admin-products.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14L12 11m0 12V11m0 0L4 7m0 10V7"/></svg>Products</a>
+    <a class="nav-item active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>Orders</a>
+    <a class="nav-item" href="admin-payouts.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5.5c-1.2-1-2.9-1.5-5-1.5-3 0-5 1.3-5 3.5S9 11 12 11s5 1.3 5 3.5-2 3.5-5 3.5c-2.1 0-3.8-.5-5-1.5"/></svg>Payouts</a>
+    <div class="nav-group-label">Engagement</div>
+    <a class="nav-item" href="admin-chat.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>Customer Chat</a>
+    <a class="nav-item" href="admin-reviews.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 17.75l-6.16 3.24 1.18-6.88L2 9.24l6.92-1L12 2l3.08 6.24 6.92 1-5.02 4.87 1.18 6.88z"/></svg>Reviews</a>
+    <div class="nav-group-label">Configuration</div>
+    <a class="nav-item" href="admin-settings.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Store Settings</a>
+    <div class="sidebar-foot"><div class="avatar">RC</div><div><div class="vendor-name">Riya Crafts</div><div class="vendor-tier">Gold Vendor · Kathmandu</div></div></div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div><div class="page-title">Orders</div><div class="page-sub">312 orders this month</div></div>
+      <button class="btn-primary">Export orders</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-label">New orders</div><div class="stat-value">18</div></div>
+      <div class="stat-card"><div class="stat-label">Awaiting shipment</div><div class="stat-value">24</div></div>
+      <div class="stat-card"><div class="stat-label">In transit</div><div class="stat-value">56</div></div>
+      <div class="stat-card"><div class="stat-label">Returns requested</div><div class="stat-value">3</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search order ID or customer…</div>
+      <div class="filter-chip">Date range <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div class="filter-chip">Payment method <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+    </div>
+
+    <div class="tab-row">
+      <div class="tab active">All <span class="count">(312)</span></div>
+      <div class="tab">New <span class="count">(18)</span></div>
+      <div class="tab">Processing <span class="count">(24)</span></div>
+      <div class="tab">Shipped <span class="count">(56)</span></div>
+      <div class="tab">Delivered <span class="count">(211)</span></div>
+      <div class="tab">Cancelled <span class="count">(3)</span></div>
+    </div>
+
+    <div class="panel">
+      <table>
+        <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Payment</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="order-id">#BZ-10482</td>
+            <td>Sujata Karki <div class="cust">Pokhara</div></td>
+            <td>Dhaka Topi ×1</td>
+            <td>eSewa</td>
+            <td class="amt">NPR 1,450</td>
+            <td><span class="badge pending">Processing</span></td>
+            <td><div class="row-actions"><button class="btn-mini primary">Ship</button><button class="btn-mini">View</button></div></td>
+          </tr>
+          <tr>
+            <td class="order-id">#BZ-10481</td>
+            <td>Amit Shrestha <div class="cust">Biratnagar</div></td>
+            <td>Copper Tumbler ×2</td>
+            <td>Cash on Delivery</td>
+            <td class="amt">NPR 1,960</td>
+            <td><span class="badge pending">Processing</span></td>
+            <td><div class="row-actions"><button class="btn-mini primary">Ship</button><button class="btn-mini">View</button></div></td>
+          </tr>
+          <tr>
+            <td class="order-id">#BZ-10480</td>
+            <td>Nisha Gurung <div class="cust">Kathmandu</div></td>
+            <td>Dhaka Topi ×3</td>
+            <td>Khalti</td>
+            <td class="amt">NPR 2,700</td>
+            <td><span class="badge shipped">Shipped</span></td>
+            <td><div class="row-actions"><button class="btn-mini">Track</button><button class="btn-mini">View</button></div></td>
+          </tr>
+          <tr>
+            <td class="order-id">#BZ-10479</td>
+            <td>Bikash Rai <div class="cust">Dharan</div></td>
+            <td>Singing Bowl ×1</td>
+            <td>Card</td>
+            <td class="amt">NPR 4,100</td>
+            <td><span class="badge cancelled">Cancelled</span></td>
+            <td><div class="row-actions"><button class="btn-mini">Refund status</button></div></td>
+          </tr>
+          <tr>
+            <td class="order-id">#BZ-10478</td>
+            <td>Priya Adhikari <div class="cust">Lalitpur</div></td>
+            <td>Handwoven Bag ×1</td>
+            <td>eSewa</td>
+            <td class="amt">NPR 1,450</td>
+            <td><span class="badge paid">Delivered</span></td>
+            <td><div class="row-actions"><button class="btn-mini">View</button></div></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pagination-foot">
+        <span>Showing 1–5 of 312 orders</span>
+        <div style="display:flex;gap:6px;"><div class="page-btn">←</div><div class="page-btn active">1</div><div class="page-btn">2</div><div class="page-btn">3</div><div class="page-btn">→</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

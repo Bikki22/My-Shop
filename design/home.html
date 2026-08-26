@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bazaar — Handmade heritage, delivered</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F7F6F2; --paper-raised:#FFFFFF;
+    --navy:#181C2A; --navy-soft:#232841;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC;
+    --rust:#C6543D; --rust-soft:#F7E1DC;
+    --line:#E7E4DC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Fraunces',serif;}
+  a{color:inherit;text-decoration:none;}
+  img,svg{display:block;}
+
+  /* ---- NAV ---- */
+  .topbar{background:var(--navy);color:#EDEEF5;font-size:12.5px;padding:7px 0;text-align:center;letter-spacing:0.02em;}
+  nav{
+    display:flex;align-items:center;gap:28px;padding:18px 48px;
+    background:var(--paper-raised);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:10;
+  }
+  .brand{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+  .brand-mark{width:32px;height:32px;border-radius:8px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--navy);font-size:17px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
+  .nav-links{display:flex;gap:22px;font-size:14px;font-weight:500;color:var(--muted);}
+  .nav-links a:hover{color:var(--ink);}
+  .search-bar{
+    flex:1;display:flex;align-items:center;gap:8px;background:var(--paper);
+    border:1px solid var(--line);border-radius:9px;padding:9px 14px;max-width:420px;
+  }
+  .search-bar input{border:none;background:none;outline:none;font-size:13.5px;width:100%;font-family:inherit;color:var(--ink);}
+  .nav-icons{display:flex;align-items:center;gap:16px;margin-left:auto;}
+  .icon-btn{position:relative;cursor:pointer;color:var(--ink);}
+  .cart-badge{position:absolute;top:-6px;right:-8px;background:var(--rust);color:#fff;font-size:10px;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;}
+  .btn-sell{background:var(--ink);color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;}
+
+  /* ---- HERO ---- */
+  .hero{
+    display:grid;grid-template-columns:1fr 1fr;gap:40px;
+    padding:60px 48px;align-items:center;
+    background:
+      repeating-linear-gradient(115deg, rgba(232,163,61,0.07) 0px, rgba(232,163,61,0.07) 2px, transparent 2px, transparent 34px);
+  }
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--rust);margin-bottom:14px;}
+  .hero h1{font-family:'Fraunces',serif;font-size:46px;font-weight:600;line-height:1.08;letter-spacing:-0.5px;margin-bottom:18px;}
+  .hero h1 em{font-style:italic;color:var(--marigold);}
+  .hero p{font-size:15.5px;color:var(--muted);max-width:440px;line-height:1.6;margin-bottom:26px;}
+  .hero-ctas{display:flex;gap:12px;}
+  .btn-primary{background:var(--navy);color:#fff;padding:13px 22px;border-radius:9px;font-weight:600;font-size:14px;border:none;cursor:pointer;}
+  .btn-ghost{background:none;border:1.5px solid var(--ink);padding:12px 22px;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer;}
+  .hero-stats{display:flex;gap:28px;margin-top:32px;}
+  .hero-stat b{font-family:'JetBrains Mono',monospace;font-size:20px;display:block;}
+  .hero-stat span{font-size:11.5px;color:var(--muted);}
+
+  .hero-visual{position:relative;height:380px;}
+  .stall-card{
+    position:absolute;background:var(--paper-raised);border:1px solid var(--line);
+    border-radius:14px;padding:16px;box-shadow:0 18px 40px -18px rgba(24,28,42,0.25);
+  }
+  .stall-card .p-label{font-size:12px;font-weight:600;margin-top:10px;}
+  .stall-card .p-sub{font-size:11px;color:var(--muted);}
+  .stall-card .p-price{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-top:4px;}
+
+  /* ---- CATEGORY STRIP ---- */
+  .section{padding:52px 48px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:26px;}
+  .section-title{font-family:'Fraunces',serif;font-size:26px;font-weight:600;}
+  .section-link{font-size:13px;font-weight:600;color:var(--muted);}
+  .cat-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
+  .cat-card{
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;
+    padding:20px 14px;text-align:center;cursor:pointer;transition:transform .15s, border-color .15s;
+  }
+  .cat-card:hover{transform:translateY(-3px);border-color:var(--marigold);}
+  .cat-icon{width:38px;height:38px;margin:0 auto 10px;}
+  .cat-card .name{font-size:13px;font-weight:600;}
+  .cat-card .count{font-size:11px;color:var(--muted);margin-top:2px;}
+
+  /* ---- VENDOR ROW ---- */
+  .vendor-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .vendor-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;gap:12px;align-items:center;}
+  .vendor-avatar{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;color:#fff;font-size:15px;}
+  .vendor-card .vname{font-size:13.5px;font-weight:600;}
+  .vendor-card .vloc{font-size:11.5px;color:var(--muted);}
+  .vendor-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--teal);font-weight:600;margin-top:3px;}
+
+  /* ---- PRODUCT GRID ---- */
+  .product-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+  .product-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;}
+  .product-card:hover{box-shadow:0 14px 30px -16px rgba(24,28,42,0.3);}
+  .product-thumb{height:160px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .sale-tag{position:absolute;top:10px;left:10px;background:var(--rust);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:5px;}
+  .wish{position:absolute;top:10px;right:10px;width:28px;height:28px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.12);}
+  .product-info{padding:14px;}
+  .p-vendor{font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .p-name{font-size:13.5px;font-weight:600;line-height:1.3;margin-bottom:6px;}
+  .p-price-row{display:flex;align-items:center;gap:8px;}
+  .p-price{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14.5px;}
+  .p-was{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-decoration:line-through;}
+  .p-rating{display:flex;align-items:center;gap:3px;font-size:11.5px;color:var(--muted);margin-top:6px;}
+
+  /* ---- EDITORIAL ---- */
+  .editorial{background:var(--navy);color:#EDEEF5;border-radius:18px;margin:0 48px;padding:48px;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;}
+  .editorial .eyebrow{color:var(--marigold);}
+  .editorial h2{font-family:'Fraunces',serif;font-size:30px;font-weight:600;margin-bottom:14px;line-height:1.2;}
+  .editorial p{color:#B7BACB;font-size:14.5px;line-height:1.7;margin-bottom:20px;max-width:440px;}
+  .editorial-visual{height:220px;border-radius:14px;background:linear-gradient(135deg,#2A8C7F,#181C2A);position:relative;overflow:hidden;}
+
+  /* ---- FOOTER ---- */
+  footer{background:var(--navy);color:#9195AC;padding:50px 48px 30px;margin-top:20px;}
+  .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:36px;}
+  .foot-grid h4{color:#EDEEF5;font-size:13px;margin-bottom:14px;}
+  .foot-grid a{display:block;font-size:13px;margin-bottom:9px;color:#9195AC;}
+  .foot-bottom{border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;font-size:12px;display:flex;justify-content:space-between;}
+
+  @media (max-width:1100px){
+    .hero,.editorial{grid-template-columns:1fr;}
+    .cat-row,.vendor-row,.product-grid{grid-template-columns:repeat(2,1fr);}
+    .foot-grid{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">Free delivery across Kathmandu Valley on orders above NPR 2,000 · Cash on Delivery available</div>
+
+<nav>
+  <div class="brand"><div class="brand-mark">B</div><div class="brand-name">Bazaar</div></div>
+  <div class="nav-links">
+    <a>Categories</a><a>Vendors</a><a>Deals</a><a>Sell on Bazaar</a>
+  </div>
+  <div class="search-bar">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7080" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input placeholder="Search for pashmina, singing bowls, dhaka…">
+  </div>
+  <div class="nav-icons">
+    <div class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></div>
+    <div class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg><div class="cart-badge">3</div></div>
+    <div class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg></div>
+    <a class="btn-sell">Become a vendor</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="eyebrow">From the artisans of Nepal</div>
+    <h1>Handmade heritage,<br><em>delivered</em> to your door.</h1>
+    <p>Shop directly from over 1,200 verified vendors across Kathmandu, Pokhara, and Biratnagar — textiles, pottery, jewelry, and instruments, each with a story.</p>
+    <div class="hero-ctas">
+      <button class="btn-primary">Start browsing</button>
+      <button class="btn-ghost">Meet the vendors</button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><b>1,240+</b><span>Verified vendors</span></div>
+      <div class="hero-stat"><b>38,000+</b><span>Products listed</span></div>
+      <div class="hero-stat"><b>4.8 / 5</b><span>Avg. buyer rating</span></div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="stall-card" style="top:0;left:20px;width:190px;">
+      <svg width="100%" height="100" viewBox="0 0 100 60"><rect width="100" height="60" rx="8" fill="#FBEBD1"/><path d="M20 45 Q50 10 80 45" stroke="#C6543D" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="50" cy="30" r="6" fill="#E8A33D"/></svg>
+      <div class="p-label">Dhaka Topi — Ceremonial Red</div>
+      <div class="p-sub">Riya Crafts · Kathmandu</div>
+      <div class="p-price">NPR 1,450</div>
+    </div>
+    <div class="stall-card" style="top:150px;left:150px;width:200px;">
+      <svg width="100%" height="100" viewBox="0 0 100 60"><rect width="100" height="60" rx="8" fill="#DCEFEC"/><ellipse cx="50" cy="35" rx="26" ry="14" fill="#2A8C7F"/><rect x="42" y="10" width="16" height="20" rx="4" fill="#181C2A"/></svg>
+      <div class="p-label">Handbeaten Copper Tumbler</div>
+      <div class="p-sub">Newari Metalworks · Bhaktapur</div>
+      <div class="p-price">NPR 980</div>
+    </div>
+    <div class="stall-card" style="top:260px;left:0;width:170px;">
+      <svg width="100%" height="90" viewBox="0 0 100 60"><rect width="100" height="60" rx="8" fill="#F7E1DC"/><circle cx="50" cy="34" r="20" fill="#C6543D"/><circle cx="50" cy="34" r="8" fill="#F7F6F2"/></svg>
+      <div class="p-label">Singing Bowl, 6in</div>
+      <div class="p-price">NPR 3,600</div>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="section">
+  <div class="section-head"><div class="section-title">Shop by craft</div><a class="section-link" href="#">All categories →</a></div>
+  <div class="cat-row">
+    <div class="cat-card"><svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="#C6543D" stroke-width="1.6"><path d="M4 15Q12 3 20 15" /><path d="M2 15h20"/></svg><div class="name">Textiles</div><div class="count">6,200 items</div></div>
+    <div class="cat-card"><svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="#2A8C7F" stroke-width="1.6"><ellipse cx="12" cy="14" rx="8" ry="5"/><rect x="9" y="3" width="6" height="8" rx="2"/></svg><div class="name">Pottery & Metal</div><div class="count">4,800 items</div></div>
+    <div class="cat-card"><svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><div class="name">Jewelry</div><div class="count">5,100 items</div></div>
+    <div class="cat-card"><svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="#181C2A" stroke-width="1.6"><path d="M4 20V10a8 8 0 0116 0v10"/><path d="M4 20h16"/></svg><div class="name">Home & Ritual</div><div class="count">3,400 items</div></div>
+    <div class="cat-card"><svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="#C6543D" stroke-width="1.6"><circle cx="9" cy="17" r="3"/><path d="M12 17V4l7 2v11"/></svg><div class="name">Instruments</div><div class="count">1,900 items</div></div>
+    <div class="cat-card"><svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="#2A8C7F" stroke-width="1.6"><path d="M4 8h16l-1.5 12h-13z"/><path d="M8 8V6a4 4 0 018 0v2"/></svg><div class="name">Bags</div><div class="count">2,700 items</div></div>
+  </div>
+</section>
+
+<!-- VENDORS -->
+<section class="section" style="padding-top:0;">
+  <div class="section-head"><div class="section-title">Vendors of the week</div><a class="section-link" href="#">Browse all vendors →</a></div>
+  <div class="vendor-row">
+    <div class="vendor-card"><div class="vendor-avatar" style="background:linear-gradient(135deg,#E8A33D,#C6543D);">RC</div><div><div class="vname">Riya Crafts</div><div class="vloc">Kathmandu</div><div class="vendor-badge">✓ Verified · 4.9 ★</div></div></div>
+    <div class="vendor-card"><div class="vendor-avatar" style="background:linear-gradient(135deg,#2A8C7F,#181C2A);">NM</div><div><div class="vname">Newari Metalworks</div><div class="vloc">Bhaktapur</div><div class="vendor-badge">✓ Verified · 4.8 ★</div></div></div>
+    <div class="vendor-card"><div class="vendor-avatar" style="background:linear-gradient(135deg,#C6543D,#181C2A);">HL</div><div><div class="vname">Himalayan Looms</div><div class="vloc">Pokhara</div><div class="vendor-badge">✓ Verified · 4.9 ★</div></div></div>
+    <div class="vendor-card"><div class="vendor-avatar" style="background:linear-gradient(135deg,#E8A33D,#2A8C7F);">DB</div><div><div class="vname">Dolakha Bowls</div><div class="vloc">Dolakha</div><div class="vendor-badge">✓ Verified · 5.0 ★</div></div></div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="section" style="padding-top:0;">
+  <div class="section-head"><div class="section-title">Trending this week</div><a class="section-link" href="#">See all products →</a></div>
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="product-thumb" style="background:#FBEBD1;">
+        <div class="sale-tag">-15%</div><div class="wish">♡</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><path d="M20 70 Q50 15 80 70" stroke="#C6543D" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="50" cy="42" r="9" fill="#E8A33D"/></svg>
+      </div>
+      <div class="product-info">
+        <div class="p-vendor">Riya Crafts</div>
+        <div class="p-name">Dhaka Topi — Ceremonial Red</div>
+        <div class="p-price-row"><span class="p-price">NPR 1,450</span><span class="p-was">1,700</span></div>
+        <div class="p-rating">★★★★★ (128)</div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#DCEFEC;">
+        <div class="wish">♡</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="34" ry="18" fill="#2A8C7F"/><rect x="40" y="18" width="20" height="26" rx="5" fill="#181C2A"/></svg>
+      </div>
+      <div class="product-info">
+        <div class="p-vendor">Newari Metalworks</div>
+        <div class="p-name">Handbeaten Copper Tumbler Set</div>
+        <div class="p-price-row"><span class="p-price">NPR 980</span></div>
+        <div class="p-rating">★★★★★ (64)</div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#F7E1DC;">
+        <div class="wish">♡</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="55" r="30" fill="#C6543D"/><circle cx="50" cy="55" r="12" fill="#F7F6F2"/></svg>
+      </div>
+      <div class="product-info">
+        <div class="p-vendor">Dolakha Bowls</div>
+        <div class="p-name">Hand-hammered Singing Bowl, 6in</div>
+        <div class="p-price-row"><span class="p-price">NPR 3,600</span></div>
+        <div class="p-rating">★★★★★ (211)</div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#E8E4F5;">
+        <div class="sale-tag">-10%</div><div class="wish">♡</div>
+        <svg width="80" height="80" viewBox="0 0 100 100"><rect x="25" y="30" width="50" height="45" rx="8" fill="#181C2A"/><path d="M35 30v-8a15 15 0 0130 0v8" stroke="#181C2A" stroke-width="6" fill="none"/></svg>
+      </div>
+      <div class="product-info">
+        <div class="p-vendor">Himalayan Looms</div>
+        <div class="p-name">Handwoven Shoulder Bag — Indigo</div>
+        <div class="p-price-row"><span class="p-price">NPR 1,650</span><span class="p-was">1,850</span></div>
+        <div class="p-rating">★★★★☆ (39)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITORIAL -->
+<div class="editorial">
+  <div>
+    <div class="eyebrow">Bazaar Journal</div>
+    <h2>Inside the last Dhaka loom<br>house of Palpa</h2>
+    <p>Three generations of the Thapa family have kept a single wooden loom running since 1962. We spent a week learning how each Dhaka pattern is planned before a single thread is dyed.</p>
+    <button class="btn-primary" style="background:var(--marigold);color:var(--navy);">Read the story</button>
+  </div>
+  <div class="editorial-visual"></div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-grid">
+    <div>
+      <div class="brand" style="margin-bottom:14px;"><div class="brand-mark">B</div><div class="brand-name" style="color:#EDEEF5;">Bazaar</div></div>
+      <p style="font-size:13px;max-width:280px;line-height:1.6;">A marketplace connecting Nepali artisans directly with buyers, across 1,200+ verified vendor stalls.</p>
+    </div>
+    <div><h4>Shop</h4><a>Categories</a><a>Deals</a><a>New arrivals</a><a>Gift cards</a></div>
+    <div><h4>Sell</h4><a>Become a vendor</a><a>Vendor dashboard</a><a>Seller fees</a><a>Success stories</a></div>
+    <div><h4>Support</h4><a>Help center</a><a>Track an order</a><a>Returns</a><a>Contact us</a></div>
+  </div>
+  <div class="foot-bottom"><span>© 2026 Bazaar Marketplace Pvt. Ltd. — Kathmandu, Nepal</span><span>Cash on Delivery · eSewa · Khalti · Cards</span></div>
+</footer>
+
+</body>
+</html>

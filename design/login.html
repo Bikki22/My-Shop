@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sign in — Bazaar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F7F6F2; --navy:#181C2A;
+    --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC; --rust:#C6543D;
+    --line:#E7E4DC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+
+  .split{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+  .visual{
+    background:var(--navy);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:space-between;
+    background-image: repeating-linear-gradient(115deg, rgba(232,163,61,0.08) 0px, rgba(232,163,61,0.08) 2px, transparent 2px, transparent 34px);
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{width:34px;height:34px;border-radius:8px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--navy);font-size:17px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:20px;font-weight:600;}
+  .visual-quote{font-family:'Fraunces',serif;font-size:28px;font-weight:500;line-height:1.35;max-width:420px;}
+  .visual-quote em{font-style:italic;color:var(--marigold);}
+  .visual-stats{display:flex;gap:32px;}
+  .visual-stats div span{display:block;font-size:11.5px;color:#9195AC;margin-top:4px;}
+  .visual-stats div b{font-family:'JetBrains Mono',monospace;font-size:22px;}
+
+  .form-side{display:flex;align-items:center;justify-content:center;padding:40px;}
+  .form-box{width:100%;max-width:380px;}
+  .tab-toggle{display:flex;background:#EFEEE8;border-radius:10px;padding:4px;margin-bottom:28px;}
+  .tab-toggle div{flex:1;text-align:center;padding:9px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--muted);}
+  .tab-toggle div.active{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,0.06);}
+
+  h1.form-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;margin-bottom:6px;}
+  .form-sub{font-size:13px;color:var(--muted);margin-bottom:26px;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:7px;}
+  .field input{width:100%;border:1px solid var(--line);border-radius:9px;padding:12px 14px;font-size:13.5px;font-family:inherit;}
+  .field-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+  .remember{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);}
+  .remember input{accent-color:var(--marigold);}
+  .forgot{font-size:12.5px;font-weight:600;color:var(--teal);}
+
+  .btn-primary{width:100%;background:var(--navy);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:16px;}
+
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0;font-size:11.5px;color:var(--muted);}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line);}
+
+  .oauth-row{display:flex;gap:10px;margin-bottom:24px;}
+  .oauth-btn{flex:1;border:1.5px solid var(--line);border-radius:9px;padding:11px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;}
+
+  .switch-note{text-align:center;font-size:13px;color:var(--muted);}
+  .switch-note b{color:var(--teal);cursor:pointer;}
+
+  .otp-note{background:var(--marigold-soft);border-radius:9px;padding:12px 14px;font-size:12px;color:#9C6A17;margin-bottom:20px;display:flex;gap:8px;align-items:flex-start;}
+
+  @media (max-width:850px){ .split{grid-template-columns:1fr;} .visual{display:none;} }
+</style>
+</head>
+<body>
+
+<div class="split">
+  <div class="visual">
+    <div class="brand"><div class="brand-mark">B</div><div class="brand-name">Bazaar</div></div>
+    <div class="visual-quote">Every purchase here carries <em>a name, a family, a workshop</em> behind it.</div>
+    <div class="visual-stats">
+      <div><b>1,240+</b><span>Verified vendors</span></div>
+      <div><b>38,000+</b><span>Products listed</span></div>
+      <div><b>96%</b><span>On-time delivery</span></div>
+    </div>
+  </div>
+
+  <div class="form-side">
+    <div class="form-box">
+      <div class="tab-toggle">
+        <div class="active">Sign in</div>
+        <div>Create account</div>
+      </div>
+
+      <h1 class="form-title">Welcome back</h1>
+      <div class="form-sub">Sign in to track orders, message vendors, and check out faster.</div>
+
+      <div class="field"><label>Email or phone number</label><input placeholder="you@example.com or 98XXXXXXXX"></div>
+      <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+
+      <div class="field-row">
+        <label class="remember"><input type="checkbox" checked> Keep me signed in</label>
+        <a class="forgot">Forgot password?</a>
+      </div>
+
+      <button class="btn-primary">Sign in</button>
+
+      <div class="otp-note">📱 Prefer OTP? We can send a one-time code to your phone instead of a password.</div>
+
+      <div class="divider">OR CONTINUE WITH</div>
+
+      <div class="oauth-row">
+        <div class="oauth-btn">G Google</div>
+        <div class="oauth-btn">f Facebook</div>
+      </div>
+
+      <div class="switch-note">New to Bazaar? <b>Create an account</b></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

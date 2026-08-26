@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Revenue — Bazaar Platform Ops</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D12; --panel:#12151D; --panel-raised:#171B25;
+    --line:#232837; --line-soft:#1B2029;
+    --ink:#E7E9F0; --muted:#7C8399; --dim:#565D70;
+    --amber:#F0A63A; --red:#E5584D; --green:#3FC98A; --cyan:#4FB8E8; --purple:#9D7FE8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{text-decoration:none;color:inherit;}
+  .app{display:grid;grid-template-columns:60px 1fr;min-height:100vh;}
+  .rail{background:#08090D;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;align-items:center;padding:20px 0;gap:6px;position:sticky;top:0;height:100vh;}
+  .rail-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--purple),#5B3FA0);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#fff;font-size:15px;margin-bottom:22px;}
+  .rail-item{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer;position:relative;}
+  .rail-item:hover{background:var(--panel-raised);color:var(--ink);}
+  .rail-item.active{background:var(--panel-raised);color:var(--purple);box-shadow:inset 0 0 0 1px rgba(157,127,232,0.35);}
+  .rail-item .dot{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--red);}
+  .rail-spacer{flex:1;}
+  .rail-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#9D7FE8,#181C2A);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#fff;font-size:12px;}
+  main{padding:22px 32px 60px;}
+  .cmd-bar{display:flex;align-items:center;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--line-soft);margin-bottom:20px;}
+  .breadcrumb{font-size:12px;color:var(--dim);}
+  .breadcrumb b{color:var(--ink);font-weight:600;}
+  .env-pill{display:flex;align-items:center;gap:6px;background:rgba(63,201,138,0.12);color:var(--green);font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;}
+  .env-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);}
+  .cmd-search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--dim);font-size:12.5px;}
+  .cmd-search kbd{margin-left:auto;background:var(--line-soft);color:var(--dim);font-size:10px;padding:2px 6px;border-radius:4px;font-family:'IBM Plex Mono',monospace;}
+  .cmd-actions{display:flex;align-items:center;gap:14px;margin-left:auto;}
+  .bell{position:relative;color:var(--dim);}
+  .bell .badge{position:absolute;top:-6px;right:-7px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;}
+  .admin-chip{font-size:12.5px;color:var(--muted);}
+
+  .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .page-title{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;}
+  .page-sub{font-size:12.5px;color:var(--muted);margin-top:3px;}
+  .range-toggle{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;}
+  .range-toggle div{padding:7px 14px;font-size:12px;font-weight:600;color:var(--dim);border-radius:6px;cursor:pointer;}
+  .range-toggle div.active{background:var(--purple);color:#fff;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+  .kpi-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;}
+  .kpi-label{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:600;}
+  .kpi-delta{font-size:11px;margin-top:6px;color:var(--green);}
+
+  .grid-main{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .panel-title{font-family:'Space Grotesk',sans-serif;font-size:15.5px;font-weight:600;}
+  .panel-link{font-size:11.5px;color:var(--purple);font-weight:600;}
+
+  .chart-wrap{height:220px;}
+
+  .breakdown-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-soft);}
+  .breakdown-row:last-child{border:none;}
+  .breakdown-name{font-size:12.5px;font-weight:600;}
+  .breakdown-sub{font-size:10.5px;color:var(--dim);}
+  .breakdown-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim);font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line-soft);background:var(--panel-raised);}
+  td{padding:12px 14px;font-size:12.5px;border-bottom:1px solid var(--line-soft);}
+  tr:last-child td{border-bottom:none;}
+  .panel.table-panel{padding:0;overflow:hidden;}
+  .panel.table-panel .panel-head{padding:20px 20px 0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="rail-logo">B</div>
+    <a href="platform-admin.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></a>
+    <a href="platform-vendors.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/></svg></a>
+    <a href="platform-orders.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/></svg></a>
+    <a href="platform-admin.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><div class="dot"></div></a>
+    <a href="platform-categories.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14L12 11m0 12V11m0 0L4 7m0 10V7"/></svg></a>
+    <a href="platform-payouts.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5.5c-1.2-1-2.9-1.5-5-1.5-3 0-5 1.3-5 3.5S9 11 12 11s5 1.3 5 3.5-2 3.5-5 3.5c-2.1 0-3.8-.5-5-1.5"/></svg></a>
+    <a href="platform-revenue.html" class="rail-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg></a>
+    <a href="platform-customers.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><circle cx="18" cy="7" r="3"/><path d="M23 21c0-3-2-5-4.5-5.5"/></svg></a>
+    <div class="rail-spacer"></div>
+    <a href="platform-settings.html" class="rail-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82"/></svg></a>
+    <div class="rail-avatar">SA</div>
+  </aside>
+
+  <main>
+    <div class="cmd-bar">
+      <div class="breadcrumb">Bazaar / <b>Revenue</b></div>
+      <div class="env-pill">Production</div>
+      <div class="cmd-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search vendors, orders, disputes…<kbd>⌘K</kbd></div>
+      <div class="cmd-actions"><div class="bell"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><div class="badge">10</div></div><div class="admin-chip">Sabin Adhikari · Superuser</div></div>
+    </div>
+
+    <div class="page-title-row">
+      <div><div class="page-title">Revenue reports</div><div class="page-sub">Platform commission, gateway fees, and net revenue</div></div>
+      <div class="range-toggle"><div>7D</div><div class="active">30D</div><div>90D</div><div>YTD</div></div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Total GMV</div><div class="kpi-value mono">NPR 2.14Cr</div><div class="kpi-delta">↑ 9.2%</div></div>
+      <div class="kpi-card"><div class="kpi-label">Platform commission</div><div class="kpi-value mono">NPR 9.8L</div><div class="kpi-delta">↑ 8.7%</div></div>
+      <div class="kpi-card"><div class="kpi-label">Payment processing fees</div><div class="kpi-value mono" style="color:var(--amber);">NPR 3.2L</div><div class="kpi-delta" style="color:var(--dim);">1.5% of GMV</div></div>
+      <div class="kpi-card"><div class="kpi-label">Net platform revenue</div><div class="kpi-value mono" style="color:var(--green);">NPR 6.6L</div><div class="kpi-delta">↑ 9.2%</div></div>
+    </div>
+
+    <div class="grid-main">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Revenue trend, last 30 days</div><a class="panel-link" href="#">export →</a></div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 700 220" width="100%" height="220" preserveAspectRatio="none">
+            <line x1="0" y1="30" x2="700" y2="30" stroke="#232837"/><line x1="0" y1="90" x2="700" y2="90" stroke="#232837"/><line x1="0" y1="150" x2="700" y2="150" stroke="#232837"/><line x1="0" y1="210" x2="700" y2="210" stroke="#232837"/>
+            <polyline points="0,180 50,160 100,170 150,140 200,150 250,110 300,120 350,90 400,100 450,70 500,80 550,50 600,60 650,35 700,40" fill="none" stroke="#3FC98A" stroke-width="2.5"/>
+            <polyline points="0,150 50,145 100,148 150,130 200,135 250,115 300,120 350,105 400,110 450,95 500,100 550,85 600,90 650,75 700,78" fill="none" stroke="#9D7FE8" stroke-width="2" stroke-dasharray="4 3"/>
+          </svg>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:6px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);"><div style="width:16px;height:2px;background:#3FC98A;"></div>GMV</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);"><div style="width:16px;height:2px;background:#9D7FE8;"></div>Platform revenue</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Revenue by source</div></div>
+        <div class="breakdown-row"><div><div class="breakdown-name">Commission fees</div><div class="breakdown-sub">4–5% per vendor tier</div></div><div class="breakdown-val">NPR 9.8L</div></div>
+        <div class="breakdown-row"><div><div class="breakdown-name">Payment gateway markup</div><div class="breakdown-sub">eSewa + Khalti</div></div><div class="breakdown-val">NPR 1.4L</div></div>
+        <div class="breakdown-row"><div><div class="breakdown-name">Featured placement fees</div><div class="breakdown-sub">Gold/Enterprise tier</div></div><div class="breakdown-val">NPR 0.6L</div></div>
+        <div class="breakdown-row"><div><div class="breakdown-name">Late shipment penalties</div><div class="breakdown-sub">Vendor SLA breaches</div></div><div class="breakdown-val">NPR 0.2L</div></div>
+      </div>
+    </div>
+
+    <div class="panel table-panel">
+      <div class="panel-head"><div class="panel-title">Top revenue-generating vendors</div><a class="panel-link" href="#">full report →</a></div>
+      <table>
+        <thead><tr><th>Vendor</th><th>GMV (30D)</th><th>Commission earned</th><th>Category</th></tr></thead>
+        <tbody>
+          <tr><td>Riya Crafts</td><td class="mono">NPR 4.8L</td><td class="mono" style="color:var(--green);">NPR 19,200</td><td>Textiles</td></tr>
+          <tr><td>Newari Metalworks</td><td class="mono">NPR 3.1L</td><td class="mono" style="color:var(--green);">NPR 12,400</td><td>Pottery & Metal</td></tr>
+          <tr><td>Himalayan Looms</td><td class="mono">NPR 2.4L</td><td class="mono" style="color:var(--green);">NPR 12,000</td><td>Textiles</td></tr>
+          <tr><td>Dolakha Bowls</td><td class="mono">NPR 1.9L</td><td class="mono" style="color:var(--green);">NPR 9,500</td><td>Home & Ritual</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+</body>
+</html>

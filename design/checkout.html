@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Checkout — Bazaar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F7F6F2; --paper-raised:#FFFFFF;
+    --navy:#181C2A; --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC; --rust:#C6543D; --rust-soft:#F7E1DC;
+    --line:#E7E4DC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  nav{display:flex;align-items:center;gap:28px;padding:16px 48px;background:#fff;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:center;gap:9px;}
+  .brand-mark{width:30px;height:30px;border-radius:7px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--navy);font-size:15px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:18px;font-weight:600;}
+  .steps{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:12.5px;color:var(--muted);}
+  .step{display:flex;align-items:center;gap:6px;}
+  .step.active{color:var(--ink);font-weight:700;}
+  .step.done{color:var(--teal);font-weight:700;}
+  .step-dot{width:20px;height:20px;border-radius:50%;background:var(--line);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+  .step.active .step-dot{background:var(--marigold);color:var(--navy);}
+  .step.done .step-dot{background:var(--teal);}
+  .step-sep{width:24px;height:1px;background:var(--line);}
+
+  h1.page-title{font-family:'Fraunces',serif;font-size:28px;font-weight:600;padding:26px 48px 20px;}
+  .layout{display:grid;grid-template-columns:1.7fr 1fr;gap:26px;padding:0 48px 60px;}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;}
+  .panel-title{font-family:'Fraunces',serif;font-size:16.5px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+  .panel-num{width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .form-field{display:flex;flex-direction:column;gap:6px;}
+  .form-field label{font-size:12px;font-weight:600;color:var(--muted);}
+  .form-field input, .form-field select{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:inherit;}
+
+  .addr-card{border:1.5px solid var(--marigold);background:var(--marigold-soft);border-radius:10px;padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
+  .addr-card input{margin-top:3px;accent-color:var(--marigold);}
+  .addr-name{font-size:13.5px;font-weight:700;}
+  .addr-tag{font-size:10.5px;background:var(--navy);color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;}
+  .addr-text{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5;}
+  .addr-card.alt{border-color:var(--line);background:#fff;}
+
+  .pay-methods{display:flex;flex-direction:column;gap:10px;}
+  .pay-method{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;}
+  .pay-method.active{border-color:var(--navy);}
+  .pay-method input{accent-color:var(--navy);width:16px;height:16px;}
+  .pay-name{font-size:13.5px;font-weight:600;}
+  .pay-sub{font-size:11.5px;color:var(--muted);}
+  .pay-icon{width:36px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+
+  .card-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
+  .card-fields .full{grid-column:1/3;}
+
+  /* SUMMARY */
+  .summary{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;align-self:start;position:sticky;top:24px;}
+  .summary-title{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin-bottom:16px;}
+  .mini-item{display:flex;gap:10px;align-items:center;margin-bottom:12px;}
+  .mini-thumb{width:42px;height:42px;border-radius:8px;flex-shrink:0;}
+  .mini-name{font-size:12.5px;font-weight:600;}
+  .mini-meta{font-size:11px;color:var(--muted);}
+  .mini-price{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;}
+
+  .sum-row{display:flex;justify-content:space-between;font-size:13.5px;margin:12px 0;color:var(--muted);}
+  .sum-row span:last-child{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:600;}
+  .sum-divider{border-top:1px solid var(--line);margin:14px 0;}
+  .sum-total{display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-bottom:20px;}
+  .sum-total span:last-child{font-family:'JetBrains Mono',monospace;font-size:19px;}
+  .btn-place{width:100%;background:var(--navy);color:#fff;padding:15px;border-radius:10px;font-weight:700;font-size:14.5px;border:none;cursor:pointer;margin-bottom:12px;}
+  .terms-note{font-size:11px;color:var(--muted);text-align:center;line-height:1.5;}
+
+  @media (max-width:950px){ .layout{grid-template-columns:1fr;} .form-row,.card-fields{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand"><div class="brand-mark">B</div><div class="brand-name">Bazaar</div></div>
+  <div class="steps">
+    <div class="step done"><div class="step-dot">✓</div>Cart</div>
+    <div class="step-sep"></div>
+    <div class="step active"><div class="step-dot">2</div>Checkout</div>
+    <div class="step-sep"></div>
+    <div class="step"><div class="step-dot">3</div>Confirmation</div>
+  </div>
+</nav>
+
+<h1 class="page-title">Checkout</h1>
+
+<div class="layout">
+  <div>
+
+    <!-- SHIPPING -->
+    <div class="panel">
+      <div class="panel-title"><div class="panel-num">1</div>Shipping address</div>
+
+      <div class="addr-card">
+        <input type="radio" name="addr" checked>
+        <div>
+          <span class="addr-name">Bikki Chaudhary <span class="addr-tag">Home</span></span>
+          <div class="addr-text">Ward 3, Katunje Marg, Biratnagar, Koshi Province · 9800000000</div>
+        </div>
+      </div>
+      <div class="addr-card alt">
+        <input type="radio" name="addr">
+        <div>
+          <span class="addr-name">Bikki Chaudhary <span class="addr-tag">Office</span></span>
+          <div class="addr-text">Traffic Chowk, Biratnagar-4, Koshi Province · 9800000000</div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:14px;">
+        <div class="form-field"><label>Full name</label><input value="Bikki Chaudhary"></div>
+        <div class="form-field"><label>Phone number</label><input value="98XXXXXXXX"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-field"><label>City / Municipality</label><input value="Biratnagar"></div>
+        <div class="form-field"><label>Province</label><select><option>Koshi</option><option>Bagmati</option><option>Gandaki</option></select></div>
+      </div>
+      <div class="form-field"><label>Delivery notes (optional)</label><input placeholder="e.g. Leave with security guard"></div>
+    </div>
+
+    <!-- PAYMENT -->
+    <div class="panel">
+      <div class="panel-title"><div class="panel-num">2</div>Payment method</div>
+      <div class="pay-methods">
+        <label class="pay-method active">
+          <input type="radio" name="pay" checked>
+          <div class="pay-icon" style="background:#2A8C7F;">eSewa</div>
+          <div><div class="pay-name">eSewa Wallet</div><div class="pay-sub">Pay instantly, refunds in 2–3 days</div></div>
+        </label>
+        <label class="pay-method">
+          <input type="radio" name="pay">
+          <div class="pay-icon" style="background:#5B21B6;">Khalti</div>
+          <div><div class="pay-name">Khalti Wallet</div><div class="pay-sub">Pay instantly, refunds in 2–3 days</div></div>
+        </label>
+        <label class="pay-method">
+          <input type="radio" name="pay">
+          <div class="pay-icon" style="background:#181C2A;">Card</div>
+          <div><div class="pay-name">Debit / Credit Card</div><div class="pay-sub">Visa, Mastercard supported</div></div>
+        </label>
+        <label class="pay-method">
+          <input type="radio" name="pay">
+          <div class="pay-icon" style="background:#C6543D;">COD</div>
+          <div><div class="pay-name">Cash on Delivery</div><div class="pay-sub">Pay when your order arrives</div></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- REVIEW ITEMS -->
+    <div class="panel">
+      <div class="panel-title"><div class="panel-num">3</div>Review items (3)</div>
+      <div class="mini-item"><div class="mini-thumb" style="background:#FBEBD1;"></div><div><div class="mini-name">Dhaka Topi — Ceremonial Red</div><div class="mini-meta">Riya Crafts · Qty 1</div></div><div class="mini-price">NPR 1,450</div></div>
+      <div class="mini-item"><div class="mini-thumb" style="background:#F7E1DC;"></div><div><div class="mini-name">Embroidered Tote — Terracotta</div><div class="mini-meta">Riya Crafts · Qty 1</div></div><div class="mini-price">NPR 1,150</div></div>
+      <div class="mini-item"><div class="mini-thumb" style="background:#F7E1DC;"></div><div><div class="mini-name">Singing Bowl, 6in</div><div class="mini-meta">Dolakha Bowls · Qty 1</div></div><div class="mini-price">NPR 3,600</div></div>
+    </div>
+
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="summary-title">Order total</div>
+    <div class="sum-row"><span>Subtotal</span><span>NPR 6,200</span></div>
+    <div class="sum-row"><span>Promo (DASHAIN10)</span><span>– NPR 260</span></div>
+    <div class="sum-row"><span>Shipping</span><span>NPR 180</span></div>
+    <div class="sum-divider"></div>
+    <div class="sum-total"><span>Total due</span><span>NPR 6,120</span></div>
+    <button class="btn-place">Place order</button>
+    <div class="terms-note">By placing your order, you agree to Bazaar's Terms of Service and Return Policy.</div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dhaka Topi — Ceremonial Red — Bazaar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2130; --paper:#F7F6F2; --paper-raised:#FFFFFF;
+    --navy:#181C2A; --marigold:#E8A33D; --marigold-soft:#FBEBD1;
+    --teal:#2A8C7F; --teal-soft:#DCEFEC; --rust:#C6543D; --rust-soft:#F7E1DC;
+    --line:#E7E4DC; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  nav{display:flex;align-items:center;gap:28px;padding:16px 48px;background:#fff;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:center;gap:9px;}
+  .brand-mark{width:30px;height:30px;border-radius:7px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--navy);font-size:15px;}
+  .brand-name{font-family:'Fraunces',serif;font-size:18px;font-weight:600;}
+  .search-bar{flex:1;display:flex;align-items:center;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:9px 14px;max-width:420px;}
+  .search-bar input{border:none;background:none;outline:none;font-size:13.5px;width:100%;font-family:inherit;}
+  .nav-icons{display:flex;gap:16px;margin-left:auto;align-items:center;}
+  .icon-btn{position:relative;}
+  .cart-badge{position:absolute;top:-6px;right:-8px;background:var(--rust);color:#fff;font-size:10px;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;}
+
+  .breadcrumb{padding:16px 48px 0;font-size:12.5px;color:var(--muted);}
+  .breadcrumb b{color:var(--ink);}
+
+  .pd-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;padding:26px 48px 20px;}
+
+  /* GALLERY */
+  .gallery-main{background:var(--marigold-soft);border-radius:16px;height:420px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:12px;}
+  .gallery-main .sale-tag{position:absolute;top:16px;left:16px;background:var(--rust);color:#fff;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:6px;}
+  .thumb-row{display:flex;gap:10px;}
+  .thumb{width:72px;height:72px;border-radius:10px;background:var(--marigold-soft);border:2px solid transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .thumb.active{border-color:var(--marigold);}
+
+  /* INFO */
+  .p-vendor-link{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--teal);font-weight:600;margin-bottom:10px;}
+  .p-vendor-link svg{width:14px;height:14px;}
+  h1.pd-title{font-family:'Fraunces',serif;font-size:28px;font-weight:600;line-height:1.2;margin-bottom:10px;}
+  .pd-rating{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin-bottom:18px;}
+  .pd-rating .stars{color:var(--marigold);}
+  .pd-price-row{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;}
+  .pd-price{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;}
+  .pd-was{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--muted);text-decoration:line-through;}
+  .pd-save{font-size:12.5px;color:var(--rust);font-weight:600;}
+  .pd-tax{font-size:12px;color:var(--muted);margin-bottom:22px;}
+
+  .opt-group{margin-bottom:20px;}
+  .opt-label{font-size:12.5px;font-weight:600;margin-bottom:9px;display:flex;justify-content:space-between;}
+  .opt-label span{color:var(--muted);font-weight:500;}
+  .swatch-row{display:flex;gap:10px;}
+  .swatch{width:32px;height:32px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--line);cursor:pointer;}
+  .swatch.active{box-shadow:0 0 0 2px var(--marigold);}
+  .size-row{display:flex;gap:8px;}
+  .size-opt{padding:8px 16px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+  .size-opt.active{border-color:var(--ink);background:var(--ink);color:#fff;}
+
+  .qty-row{display:flex;align-items:center;gap:16px;margin-bottom:22px;}
+  .qty-stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;}
+  .qty-stepper button{width:36px;height:36px;border:none;background:none;font-size:16px;cursor:pointer;}
+  .qty-stepper .qty-val{width:36px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .stock-note{font-size:12.5px;color:var(--teal);font-weight:600;}
+
+  .cta-row{display:flex;gap:12px;margin-bottom:22px;}
+  .btn-primary{flex:1;background:var(--navy);color:#fff;padding:15px;border-radius:10px;font-weight:700;font-size:14.5px;border:none;cursor:pointer;}
+  .btn-buy{flex:1;background:var(--marigold);color:var(--navy);padding:15px;border-radius:10px;font-weight:700;font-size:14.5px;border:none;cursor:pointer;}
+  .btn-icon{width:52px;border:1.5px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+  .trust-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+  .trust-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;font-size:11.5px;color:var(--muted);}
+  .trust-card svg{margin:0 auto 6px;}
+  .trust-card b{display:block;color:var(--ink);font-size:12.5px;margin-bottom:2px;}
+
+  .vendor-mini{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;}
+  .vendor-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#E8A33D,#C6543D);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;color:#fff;flex-shrink:0;}
+  .vendor-mini .vname{font-size:13.5px;font-weight:600;}
+  .vendor-mini .vmeta{font-size:11.5px;color:var(--muted);}
+  .btn-visit{margin-left:auto;padding:8px 14px;border:1.5px solid var(--ink);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;background:none;}
+
+  /* TABS */
+  .tabs-section{padding:10px 48px 60px;}
+  .tab-row{display:flex;gap:28px;border-bottom:1px solid var(--line);margin-bottom:24px;}
+  .tab{padding:12px 0;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--ink);border-color:var(--marigold);}
+  .tab-content{max-width:760px;font-size:14px;line-height:1.75;color:var(--ink);}
+  .spec-table{width:100%;border-collapse:collapse;max-width:520px;}
+  .spec-table td{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .spec-table td:first-child{color:var(--muted);width:180px;}
+
+  .review-item{border-bottom:1px solid var(--line);padding:16px 0;}
+  .review-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .review-avatar{width:32px;height:32px;border-radius:50%;background:var(--teal-soft);color:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;}
+  .review-name{font-size:13px;font-weight:600;}
+  .review-stars{color:var(--marigold);font-size:12px;}
+  .review-text{font-size:13.5px;color:var(--ink);line-height:1.6;}
+
+  /* RELATED */
+  .related-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .product-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;}
+  .product-thumb{height:150px;display:flex;align-items:center;justify-content:center;}
+  .product-info{padding:12px;}
+  .p-vendor{font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .p-name{font-size:13px;font-weight:600;margin-bottom:6px;}
+  .p-price{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13.5px;}
+
+  @media (max-width:950px){
+    .pd-layout{grid-template-columns:1fr;}
+    .trust-row{grid-template-columns:1fr;}
+    .related-row{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand"><div class="brand-mark">B</div><div class="brand-name">Bazaar</div></div>
+  <div class="search-bar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7080" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input placeholder="Search products, vendors…"></div>
+  <div class="nav-icons">
+    <div class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></div>
+    <div class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg><div class="cart-badge">3</div></div>
+  </div>
+</nav>
+
+<div class="breadcrumb">Home / Textiles / Dhaka & Topi / <b>Dhaka Topi — Ceremonial Red</b></div>
+
+<div class="pd-layout">
+  <!-- GALLERY -->
+  <div>
+    <div class="gallery-main">
+      <div class="sale-tag">-15% OFF</div>
+      <svg width="220" height="220" viewBox="0 0 100 100"><path d="M15 72 Q50 8 85 72" stroke="#C6543D" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M25 68 Q50 20 75 68" stroke="#E8A33D" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="50" cy="38" r="10" fill="#E8A33D"/></svg>
+    </div>
+    <div class="thumb-row">
+      <div class="thumb active"><svg width="30" height="30" viewBox="0 0 100 100"><path d="M15 72 Q50 8 85 72" stroke="#C6543D" stroke-width="9" fill="none"/></svg></div>
+      <div class="thumb"><svg width="30" height="30" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="#C6543D"/></svg></div>
+      <div class="thumb"><svg width="30" height="30" viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" rx="10" fill="#E8A33D"/></svg></div>
+      <div class="thumb"><svg width="30" height="30" viewBox="0 0 100 100"><path d="M20 50h60M50 20v60" stroke="#181C2A" stroke-width="8"/></svg></div>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <div>
+    <a class="p-vendor-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+      Sold by Riya Crafts · Kathmandu
+    </a>
+    <h1 class="pd-title">Dhaka Topi — Ceremonial Red, Hand-loomed</h1>
+    <div class="pd-rating"><span class="stars">★★★★★</span> 4.9 · 128 reviews · 940 sold</div>
+
+    <div class="pd-price-row">
+      <span class="pd-price">NPR 1,450</span>
+      <span class="pd-was">1,700</span>
+      <span class="pd-save">You save NPR 250</span>
+    </div>
+    <div class="pd-tax">Inclusive of all taxes · Cash on Delivery available</div>
+
+    <div class="opt-group">
+      <div class="opt-label">Color <span>Ceremonial Red</span></div>
+      <div class="swatch-row">
+        <div class="swatch active" style="background:#C6543D;"></div>
+        <div class="swatch" style="background:#181C2A;"></div>
+        <div class="swatch" style="background:#E8A33D;"></div>
+        <div class="swatch" style="background:#2A8C7F;"></div>
+      </div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-label">Head size <span>Guide: measure at forehead</span></div>
+      <div class="size-row">
+        <div class="size-opt">54cm</div>
+        <div class="size-opt active">56cm</div>
+        <div class="size-opt">58cm</div>
+        <div class="size-opt">60cm</div>
+      </div>
+    </div>
+
+    <div class="qty-row">
+      <div class="qty-stepper"><button>–</button><div class="qty-val">1</div><button>+</button></div>
+      <div class="stock-note">● Only 6 left at this price</div>
+    </div>
+
+    <div class="cta-row">
+      <button class="btn-primary">Add to cart</button>
+      <button class="btn-buy">Buy now</button>
+      <button class="btn-icon">♡</button>
+    </div>
+
+    <div class="trust-row">
+      <div class="trust-card"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A8C7F" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg><b>Verified vendor</b>ID checked</div>
+      <div class="trust-card"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A8C7F" stroke-width="1.8"><path d="M3 12l2-8h14l2 8M3 12v7a1 1 0 001 1h16a1 1 0 001-1v-7M3 12h18"/></svg><b>7-day returns</b>No questions asked</div>
+      <div class="trust-card"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A8C7F" stroke-width="1.8"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg><b>Pay on delivery</b>Cash, eSewa, Khalti</div>
+    </div>
+
+    <div class="vendor-mini">
+      <div class="vendor-avatar">RC</div>
+      <div>
+        <div class="vname">Riya Crafts</div>
+        <div class="vmeta">4.9 ★ · 1,240 sales · Ships from Kathmandu</div>
+      </div>
+      <button class="btn-visit">Visit store</button>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-section">
+  <div class="tab-row">
+    <div class="tab active">Description</div>
+    <div class="tab">Specifications</div>
+    <div class="tab">Reviews (128)</div>
+    <div class="tab">Shipping & returns</div>
+  </div>
+  <div class="tab-content">
+    <p style="margin-bottom:16px;">Each topi is hand-loomed on traditional Dhaka looms using cotton dyed with natural pigments. The ceremonial red pattern is based on a design carried by the Thapa family workshop in Palpa for three generations, adapted here for daily wear.</p>
+    <p style="margin-bottom:24px;">Structured brim holds its shape without stiffening card, and the weave is reinforced at the fold line for everyday durability. Comes packaged in a reusable cotton pouch.</p>
+
+    <table class="spec-table">
+      <tr><td>Material</td><td>100% handloom cotton</td></tr>
+      <tr><td>Pattern</td><td>Ceremonial Dhaka, red/gold</td></tr>
+      <tr><td>Origin</td><td>Palpa, Nepal</td></tr>
+      <tr><td>Care</td><td>Hand wash cold, line dry in shade</td></tr>
+      <tr><td>Ships in</td><td>2–4 business days</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- REVIEWS PREVIEW -->
+<div class="tabs-section" style="padding-top:0;">
+  <div class="section-title" style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-bottom:16px;">What buyers say</div>
+  <div style="max-width:760px;">
+    <div class="review-item">
+      <div class="review-head"><div class="review-avatar">SK</div><div><div class="review-name">Sujata Karki</div><div class="review-stars">★★★★★</div></div></div>
+      <div class="review-text">Fit was true to size and the color is richer in person. Arrived in 3 days to Pokhara.</div>
+    </div>
+    <div class="review-item">
+      <div class="review-head"><div class="review-avatar">AS</div><div><div class="review-name">Amit Shrestha</div><div class="review-stars">★★★★★</div></div></div>
+      <div class="review-text">Bought this for Dashain — exactly the ceremonial pattern I grew up seeing. Well packaged.</div>
+    </div>
+  </div>
+</div>
+
+<!-- RELATED -->
+<div class="tabs-section" style="padding-top:0;">
+  <div class="section-title" style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-bottom:16px;">You may also like</div>
+  <div class="related-row">
+    <div class="product-card">
+      <div class="product-thumb" style="background:#DCEFEC;"><svg width="70" height="70" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="30" ry="16" fill="#2A8C7F"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Newari Metalworks</div><div class="p-name">Copper Tumbler Set</div><div class="p-price">NPR 980</div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#F7E1DC;"><svg width="70" height="70" viewBox="0 0 100 100"><circle cx="50" cy="55" r="26" fill="#C6543D"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Dolakha Bowls</div><div class="p-name">Singing Bowl, 6in</div><div class="p-price">NPR 3,600</div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#FBEBD1;"><svg width="70" height="70" viewBox="0 0 100 100"><path d="M25 68 Q50 20 75 68" stroke="#E8A33D" stroke-width="6" fill="none"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Riya Crafts</div><div class="p-name">Dhaka Topi — Gold Trim</div><div class="p-price">NPR 1,600</div></div>
+    </div>
+    <div class="product-card">
+      <div class="product-thumb" style="background:#E8E4F5;"><svg width="70" height="70" viewBox="0 0 100 100"><rect x="25" y="30" width="50" height="45" rx="8" fill="#181C2A"/></svg></div>
+      <div class="product-info"><div class="p-vendor">Himalayan Looms</div><div class="p-name">Shoulder Bag — Indigo</div><div class="p-price">NPR 1,650</div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

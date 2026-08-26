@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>All Orders — Bazaar Platform Ops</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D12; --panel:#12151D; --panel-raised:#171B25;
+    --line:#232837; --line-soft:#1B2029;
+    --ink:#E7E9F0; --muted:#7C8399; --dim:#565D70;
+    --amber:#F0A63A; --red:#E5584D; --green:#3FC98A; --cyan:#4FB8E8; --purple:#9D7FE8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{text-decoration:none;color:inherit;}
+  .app{display:grid;grid-template-columns:60px 1fr;min-height:100vh;}
+  .rail{background:#08090D;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;align-items:center;padding:20px 0;gap:6px;position:sticky;top:0;height:100vh;}
+  .rail-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--purple),#5B3FA0);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#fff;font-size:15px;margin-bottom:22px;}
+  .rail-item{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer;position:relative;}
+  .rail-item:hover{background:var(--panel-raised);color:var(--ink);}
+  .rail-item.active{background:var(--panel-raised);color:var(--purple);box-shadow:inset 0 0 0 1px rgba(157,127,232,0.35);}
+  .rail-item .dot{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--red);}
+  .rail-spacer{flex:1;}
+  .rail-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#9D7FE8,#181C2A);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#fff;font-size:12px;}
+  main{padding:22px 32px 60px;}
+  .cmd-bar{display:flex;align-items:center;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--line-soft);margin-bottom:20px;}
+  .breadcrumb{font-size:12px;color:var(--dim);}
+  .breadcrumb b{color:var(--ink);font-weight:600;}
+  .env-pill{display:flex;align-items:center;gap:6px;background:rgba(63,201,138,0.12);color:var(--green);font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;}
+  .env-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);}
+  .cmd-search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--dim);font-size:12.5px;}
+  .cmd-search kbd{margin-left:auto;background:var(--line-soft);color:var(--dim);font-size:10px;padding:2px 6px;border-radius:4px;font-family:'IBM Plex Mono',monospace;}
+  .cmd-actions{display:flex;align-items:center;gap:14px;margin-left:auto;}
+  .bell{position:relative;color:var(--dim);}
+  .bell .badge{position:absolute;top:-6px;right:-7px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;}
+  .admin-chip{font-size:12.5px;color:var(--muted);}
+
+  .page-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .page-title{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;}
+  .page-sub{font-size:12.5px;color:var(--muted);margin-top:3px;}
+  .btn-primary{background:var(--purple);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:12.5px;font-weight:600;cursor:pointer;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+  .kpi-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .kpi-label{font-size:11px;color:var(--muted);margin-bottom:8px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;}
+
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .search-box{flex:1;max-width:280px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--dim);}
+  .filter-chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);}
+
+  .tab-row{display:flex;gap:20px;border-bottom:1px solid var(--line-soft);margin-bottom:16px;}
+  .tab{padding:10px 0;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--ink);border-color:var(--purple);}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim);font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line-soft);background:var(--panel-raised);}
+  td{padding:13px 14px;font-size:12.5px;border-bottom:1px solid var(--line-soft);}
+  tr:last-child td{border-bottom:none;}
+  .cust{font-size:10.5px;color:var(--dim);}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:10.5px;font-weight:600;}
+  .badge::before{content:'';width:5px;height:5px;border-radius:50%;}
+  .badge.paid{background:rgba(63,201,138,0.12);color:var(--green);}
+  .badge.paid::before{background:var(--green);}
+  .badge.pending{background:rgba(240,166,58,0.12);color:var(--amber);}
+  .badge.pending::before{background:var(--amber);}
+  .badge.shipped{background:rgba(79,184,232,0.14);color:var(--cyan);}
+  .badge.shipped::before{background:var(--cyan);}
+  .badge.cancelled{background:rgba(229,88,77,0.12);color:var(--red);}
+  .badge.cancelled::before{background:var(--red);}
+  .badge.dispute{background:rgba(157,127,232,0.14);color:var(--purple);}
+  .badge.dispute::before{background:var(--purple);}
+
+  .btn-mini{padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-raised);color:var(--ink);font-size:11px;font-weight:600;cursor:pointer;}
+  .pagination-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-size:11.5px;color:var(--dim);}
+  .page-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:var(--panel-raised);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--muted);}
+  .page-btn.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="rail-logo">B</div>
+    <a href="platform-admin.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></a>
+    <a href="platform-vendors.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/></svg></a>
+    <a href="platform-orders.html" class="rail-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L4 3H2"/></svg></a>
+    <a href="platform-admin.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><div class="dot"></div></a>
+    <a href="platform-categories.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14L12 11m0 12V11m0 0L4 7m0 10V7"/></svg></a>
+    <a href="platform-payouts.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5.5c-1.2-1-2.9-1.5-5-1.5-3 0-5 1.3-5 3.5S9 11 12 11s5 1.3 5 3.5-2 3.5-5 3.5c-2.1 0-3.8-.5-5-1.5"/></svg></a>
+    <a href="platform-revenue.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg></a>
+    <a href="platform-customers.html" class="rail-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><circle cx="18" cy="7" r="3"/><path d="M23 21c0-3-2-5-4.5-5.5"/></svg></a>
+    <div class="rail-spacer"></div>
+    <a href="platform-settings.html" class="rail-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82"/></svg></a>
+    <div class="rail-avatar">SA</div>
+  </aside>
+
+  <main>
+    <div class="cmd-bar">
+      <div class="breadcrumb">Bazaar / <b>All Orders</b></div>
+      <div class="env-pill">Production</div>
+      <div class="cmd-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search vendors, orders, disputes…<kbd>⌘K</kbd></div>
+      <div class="cmd-actions"><div class="bell"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><div class="badge">10</div></div><div class="admin-chip">Sabin Adhikari · Superuser</div></div>
+    </div>
+
+    <div class="page-title-row">
+      <div><div class="page-title">All orders</div><div class="page-sub">1,842 orders today across 1,240 vendors</div></div>
+      <button class="btn-primary">Export CSV</button>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Orders today</div><div class="kpi-value mono">1,842</div></div>
+      <div class="kpi-card"><div class="kpi-label">Awaiting fulfillment</div><div class="kpi-value mono" style="color:var(--amber);">412</div></div>
+      <div class="kpi-card"><div class="kpi-label">Shipped</div><div class="kpi-value mono" style="color:var(--cyan);">896</div></div>
+      <div class="kpi-card"><div class="kpi-label">Cancelled today</div><div class="kpi-value mono" style="color:var(--red);">18</div></div>
+      <div class="kpi-card"><div class="kpi-label">Flagged disputes</div><div class="kpi-value mono" style="color:var(--purple);">7</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search order ID, customer, vendor…</div>
+      <div class="filter-chip">Payment method ▾</div>
+      <div class="filter-chip">Province ▾</div>
+      <div class="filter-chip">Date range ▾</div>
+    </div>
+
+    <div class="tab-row">
+      <div class="tab active">All (1,842)</div>
+      <div class="tab">Processing (412)</div>
+      <div class="tab">Shipped (896)</div>
+      <div class="tab">Delivered (509)</div>
+      <div class="tab">Cancelled (18)</div>
+      <div class="tab">Disputed (7)</div>
+    </div>
+
+    <div class="panel">
+      <table>
+        <thead><tr><th>Order</th><th>Vendor</th><th>Customer</th><th>Payment</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">#BZ-10482</td><td>Riya Crafts</td><td>Sujata Karki <div class="cust">Pokhara</div></td><td>eSewa</td><td class="mono">NPR 1,450</td><td><span class="badge pending">Processing</span></td><td><button class="btn-mini">View</button></td></tr>
+          <tr><td class="mono">#BZ-10481</td><td>Riya Crafts</td><td>Amit Shrestha <div class="cust">Biratnagar</div></td><td>COD</td><td class="mono">NPR 1,960</td><td><span class="badge pending">Processing</span></td><td><button class="btn-mini">View</button></td></tr>
+          <tr><td class="mono">#BZ-10480</td><td>Riya Crafts</td><td>Nisha Gurung <div class="cust">Kathmandu</div></td><td>Khalti</td><td class="mono">NPR 2,700</td><td><span class="badge shipped">Shipped</span></td><td><button class="btn-mini">View</button></td></tr>
+          <tr><td class="mono">#BZ-10479</td><td>Dolakha Bowls</td><td>Bikash Rai <div class="cust">Dharan</div></td><td>Card</td><td class="mono">NPR 4,100</td><td><span class="badge dispute">Disputed</span></td><td><button class="btn-mini">Investigate</button></td></tr>
+          <tr><td class="mono">#BZ-10478</td><td>Riya Crafts</td><td>Priya Adhikari <div class="cust">Lalitpur</div></td><td>eSewa</td><td class="mono">NPR 1,450</td><td><span class="badge paid">Delivered</span></td><td><button class="btn-mini">View</button></td></tr>
+          <tr><td class="mono">#BZ-10477</td><td>Newari Metalworks</td><td>Sabina Thapa <div class="cust">Bhaktapur</div></td><td>eSewa</td><td class="mono">NPR 980</td><td><span class="badge cancelled">Cancelled</span></td><td><button class="btn-mini">Refund log</button></td></tr>
+        </tbody>
+      </table>
+      <div class="pagination-foot">
+        <span>Showing 1–6 of 1,842 orders</span>
+        <div style="display:flex;gap:6px;"><div class="page-btn">←</div><div class="page-btn active">1</div><div class="page-btn">2</div><div class="page-btn">3</div><div class="page-btn">→</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
