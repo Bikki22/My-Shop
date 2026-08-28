@@ -2,19 +2,18 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
-import { User, IUser } from "../users/user.model.js";
-
-interface RegisterInput {
-  firstName: string;
-  lastName?: string;
-  email: string;
-  password: string;
-  phone: string;
-}
+import { User, type IUser } from "../users/user.model.js";
 
 interface LoginInput {
   email: string;
   password: string;
+}
+interface RegisterInput {
+  firstName: string;
+  lastName: string | null;
+  email: string;
+  password: string;
+  phone: string;
 }
 
 interface AuthTokens {
@@ -44,10 +43,6 @@ if (!REFRESH_TOKEN_SECRET) {
   throw new Error("REFRESH_TOKEN_SECRET is not configured");
 }
 
-/* -------------------------------------------------------------------------- */
-/*                               HELPERS                                      */
-/* -------------------------------------------------------------------------- */
-
 const generateRandomToken = (bytes = 32): string => {
   return crypto.randomBytes(bytes).toString("hex");
 };
@@ -71,23 +66,11 @@ const sanitizeUser = (user: IUser) => {
   return userObject;
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             AUTH SERVICE                                   */
-/* -------------------------------------------------------------------------- */
-
 export const authService = {
-  /* ------------------------------------------------------------------------ */
-  /*                              REGISTER                                    */
-  /* ------------------------------------------------------------------------ */
-
   async register(data: RegisterInput): Promise<IUser> {
     const email = data.email.toLowerCase().trim();
 
     const phone = data.phone.trim();
-
-    /*
-     * Check email.
-     */
 
     const existingEmail = await User.findOne({
       email,
@@ -97,10 +80,6 @@ export const authService = {
       throw new Error("An account with this email already exists");
     }
 
-    /*
-     * Check phone.
-     */
-
     const existingPhone = await User.findOne({
       phone,
     });
@@ -109,39 +88,15 @@ export const authService = {
       throw new Error("An account with this phone number already exists");
     }
 
-    /*
-     * Generate a cryptographic salt.
-     *
-     * bcrypt already generates its own salt internally,
-     * so the "salt" field here is application-level data.
-     *
-     * We store it because your model requires it.
-     */
-
     const salt = crypto.randomBytes(16).toString("hex");
 
-    /*
-     * Hash password.
-     */
-
     const hashedPassword = await bcrypt.hash(data.password, 12);
-
-    /*
-     * Generate email verification token.
-     *
-     * Raw token -> email
-     * Hashed token -> database
-     */
 
     const verificationToken = generateRandomToken(32);
 
     const hashedVerificationToken = hashToken(verificationToken);
 
     const verificationExpiry = new Date(Date.now() + 20 * 60 * 1000);
-
-    /*
-     * Create user.
-     */
 
     const user = await User.create({
       firstName: data.firstName.trim(),
@@ -162,9 +117,9 @@ export const authService = {
 
       verificationTokenExpiresAt: verificationExpiry,
 
-      status: "active",
+      status: "ACTIVE",
 
-      roles: "user",
+      roles: "USER",
 
       lastLogin: null,
 
@@ -222,11 +177,11 @@ export const authService = {
      * Check account status.
      */
 
-    if (user.status === "suspended") {
+    if (user.status === "SUSPENDED") {
       throw new Error("Your account has been suspended");
     }
 
-    if (user.status === "deleted") {
+    if (user.status === "DELETED") {
       throw new Error("This account no longer exists");
     }
 
@@ -254,7 +209,9 @@ export const authService = {
       ACCESS_TOKEN_SECRET,
 
       {
-        expiresIn: ACCESS_TOKEN_EXPIRY as jwt.SignOptions["expiresIn"],
+        expiresIn: ACCESS_TOKEN_EXPIRY as NonNullable<
+          jwt.SignOptions["expiresIn"]
+        >,
       },
     );
 
@@ -270,7 +227,9 @@ export const authService = {
       REFRESH_TOKEN_SECRET,
 
       {
-        expiresIn: REFRESH_TOKEN_EXPIRY as jwt.SignOptions["expiresIn"],
+        expiresIn: REFRESH_TOKEN_EXPIRY as NonNullable<
+          jwt.SignOptions["expiresIn"]
+        >,
       },
     );
 
@@ -324,15 +283,7 @@ export const authService = {
       return;
     }
 
-    /*
-     * Invalidate refresh token.
-     */
-
     user.refreshToken = null;
-
-    /*
-     * Destroy the token family too.
-     */
 
     user.refreshTokenFamily = null;
 
@@ -341,18 +292,10 @@ export const authService = {
     });
   },
 
-  /* ------------------------------------------------------------------------ */
-  /*                         REFRESH ACCESS TOKEN                             */
-  /* ------------------------------------------------------------------------ */
-
   async refreshAccessToken(refreshToken: string): Promise<AuthTokens> {
     if (!refreshToken) {
       throw new Error("Refresh token is required");
     }
-
-    /*
-     * Verify JWT.
-     */
 
     let decoded: jwt.JwtPayload;
 
@@ -371,10 +314,6 @@ export const authService = {
       throw new Error("Invalid refresh token");
     }
 
-    /*
-     * Get refresh token from DB.
-     */
-
     const user = await User.findById(userId).select(
       "+refreshToken +refreshTokenFamily",
     );
@@ -383,28 +322,13 @@ export const authService = {
       throw new Error("User not found");
     }
 
-    if (user.status !== "active") {
+    if (user.status !== "ACTIVE") {
       throw new Error("Account is not active");
     }
 
-    /*
-     * Hash incoming refresh token.
-     */
-
     const hashedIncomingToken = hashToken(refreshToken);
 
-    /*
-     * Compare with stored hash.
-     */
-
     if (user.refreshToken !== hashedIncomingToken) {
-      /*
-       * This can indicate refresh-token reuse.
-       *
-       * Later we'll implement full token-family
-       * revocation here.
-       */
-
       user.refreshToken = null;
       user.refreshTokenFamily = null;
 
@@ -414,10 +338,6 @@ export const authService = {
 
       throw new Error("Refresh token reuse detected");
     }
-
-    /*
-     * Rotate refresh token.
-     */
 
     const newAccessToken = jwt.sign(
       {
@@ -429,7 +349,9 @@ export const authService = {
       ACCESS_TOKEN_SECRET,
 
       {
-        expiresIn: ACCESS_TOKEN_EXPIRY as jwt.SignOptions["expiresIn"],
+        expiresIn: ACCESS_TOKEN_EXPIRY as NonNullable<
+          jwt.SignOptions["expiresIn"]
+        >,
       },
     );
 
@@ -441,13 +363,11 @@ export const authService = {
       REFRESH_TOKEN_SECRET,
 
       {
-        expiresIn: REFRESH_TOKEN_EXPIRY as jwt.SignOptions["expiresIn"],
+        expiresIn: REFRESH_TOKEN_EXPIRY as NonNullable<
+          jwt.SignOptions["expiresIn"]
+        >,
       },
     );
-
-    /*
-     * Store only hash.
-     */
 
     user.refreshToken = hashToken(newRefreshToken);
 
@@ -461,10 +381,6 @@ export const authService = {
       refreshToken: newRefreshToken,
     };
   },
-
-  /* ------------------------------------------------------------------------ */
-  /*                          VERIFY EMAIL                                    */
-  /* ------------------------------------------------------------------------ */
 
   async verifyEmail(token: string): Promise<IUser> {
     if (!token) {
@@ -498,20 +414,12 @@ export const authService = {
     return sanitizeUser(user) as IUser;
   },
 
-  /* ------------------------------------------------------------------------ */
-  /*                         FORGOT PASSWORD                                  */
-  /* ------------------------------------------------------------------------ */
-
   async forgotPassword(email: string) {
     const normalizedEmail = email.toLowerCase().trim();
 
     const user = await User.findOne({
       email: normalizedEmail,
     });
-
-    /*
-     * Don't expose whether account exists.
-     */
 
     if (!user) {
       return null;
@@ -531,19 +439,11 @@ export const authService = {
       validateBeforeSave: false,
     });
 
-    /*
-     * Send resetToken through email later.
-     */
-
     return {
       resetToken,
       expiresAt: resetExpiry,
     };
   },
-
-  /* ------------------------------------------------------------------------ */
-  /*                           RESET PASSWORD                                 */
-  /* ------------------------------------------------------------------------ */
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const hashedToken = hashToken(token);
@@ -560,26 +460,11 @@ export const authService = {
       throw new Error("Invalid or expired password reset token");
     }
 
-    /*
-     * Hash the new password.
-     */
-
     user.password = await bcrypt.hash(newPassword, 12);
-
-    /*
-     * Invalidate reset token.
-     */
 
     user.passwordResetToken = undefined;
 
     user.passwordResetTokenExpiresAt = undefined;
-
-    /*
-     * Invalidate all existing refresh sessions.
-     *
-     * This forces the user to login again
-     * everywhere after password reset.
-     */
 
     user.refreshToken = null;
 

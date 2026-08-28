@@ -16,8 +16,8 @@ export interface IUser extends Document {
   refreshTokenFamily: string | null;
   avatarUrl: string | null;
   phone: string;
-  status: "active" | "suspended" | "deleted";
-  roles: "user" | "org_owner" | "admin";
+  status: "ACTIVE" | "SUSPENDED" | "DELETED";
+  roles: "USER" | "MERCHANT" | "ADMIN" | "SUPER ADMIN";
   lastLogin: Date | null;
   createdAt: Date;
   deletedAt: Date | null;
@@ -87,8 +87,8 @@ const userSchema = new mongoose.Schema<IUser>(
 
     roles: {
       type: String,
-      enum: ["user", "org_owner", "admin"],
-      default: "user",
+      enum: ["USER", "MERCHANT", "ADMIN", "SUPER ADMIN"],
+      default: "USER",
     },
     phone: {
       type: String,
@@ -101,8 +101,8 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     status: {
       type: String,
-      enum: ["active", "suspended", "deleted"],
-      default: "active",
+      enum: ["ACTIVE", "SUSPENDED", "DELETED"],
+      default: "ACTIVE",
     },
     lastLogin: {
       type: Date,

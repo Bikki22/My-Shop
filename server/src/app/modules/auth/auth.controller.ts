@@ -1,15 +1,11 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 
-import { authService } from "./auth.service.js";
 import { loginSchema, registerSchema } from "./auth.validation.js";
+import { authService } from "./auth.services.js";
 
 const ACCESS_TOKEN_COOKIE = "access_token";
 
 const REFRESH_TOKEN_COOKIE = "refresh_token";
-
-/* -------------------------------------------------------------------------- */
-/*                           COOKIE CONFIG                                    */
-/* -------------------------------------------------------------------------- */
 
 const getCookieOptions = () => ({
   httpOnly: true,
@@ -24,19 +20,14 @@ const getCookieOptions = () => ({
   path: "/",
 });
 
-/* -------------------------------------------------------------------------- */
-/*                             AUTH CONTROLLER                                */
-/* -------------------------------------------------------------------------- */
-
 export const authController = {
-  /* ------------------------------------------------------------------------ */
-  /*                              REGISTER                                    */
-  /* ------------------------------------------------------------------------ */
+  async register(req: Request, res: Response) {
+    const validationData = registerSchema.parse(req.body);
 
-  async register(req: Request, res: Response): Promise<void> {
-    const validatedData = registerSchema.parse(req.body);
-
-    const user = await authService.register(validatedData);
+    const user = await authService.register({
+      ...validationData,
+      lastName: validationData.lastName ?? null,
+    });
 
     res.status(201).json({
       success: true,
@@ -49,10 +40,6 @@ export const authController = {
     });
   },
 
-  /* ------------------------------------------------------------------------ */
-  /*                                 LOGIN                                    */
-  /* ------------------------------------------------------------------------ */
-
   async login(req: Request, res: Response): Promise<void> {
     const validatedData = loginSchema.parse(req.body);
 
@@ -61,19 +48,11 @@ export const authController = {
 
     const cookieOptions = getCookieOptions();
 
-    /*
-     * Access token
-     */
-
     res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
       ...cookieOptions,
 
       maxAge: 15 * 60 * 1000,
     });
-
-    /*
-     * Refresh token
-     */
 
     res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, {
       ...cookieOptions,
@@ -92,18 +71,7 @@ export const authController = {
     });
   },
 
-  /* ------------------------------------------------------------------------ */
-  /*                                 LOGOUT                                   */
-  /* ------------------------------------------------------------------------ */
-
   async logout(req: Request, res: Response): Promise<void> {
-    /*
-     * This expects authentication middleware
-     * to eventually add req.user.
-     *
-     * We'll implement that middleware next.
-     */
-
     const userId = (
       req as Request & {
         user?: {
@@ -129,10 +97,6 @@ export const authController = {
     });
   },
 
-  /* ------------------------------------------------------------------------ */
-  /*                         REFRESH TOKEN                                    */
-  /* ------------------------------------------------------------------------ */
-
   async refreshToken(req: Request, res: Response): Promise<void> {
     const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
 
@@ -155,12 +119,6 @@ export const authController = {
       maxAge: 15 * 60 * 1000,
     });
 
-    /*
-     * Replace refresh token.
-     *
-     * This is refresh-token rotation.
-     */
-
     res.cookie(REFRESH_TOKEN_COOKIE, newRefreshToken, {
       ...cookieOptions,
 
@@ -173,10 +131,6 @@ export const authController = {
       message: "Access token refreshed",
     });
   },
-
-  /* ------------------------------------------------------------------------ */
-  /*                           VERIFY EMAIL                                   */
-  /* ------------------------------------------------------------------------ */
 
   async verifyEmail(req: Request, res: Response): Promise<void> {
     const token = req.body.token || req.query.token;
@@ -198,10 +152,6 @@ export const authController = {
     });
   },
 
-  /* ------------------------------------------------------------------------ */
-  /*                          FORGOT PASSWORD                                 */
-  /* ------------------------------------------------------------------------ */
-
   async forgotPassword(req: Request, res: Response): Promise<void> {
     const email = req.body.email;
 
@@ -211,12 +161,6 @@ export const authController = {
 
     await authService.forgotPassword(email);
 
-    /*
-     * Always return the same message.
-     *
-     * This prevents email enumeration.
-     */
-
     res.status(200).json({
       success: true,
 
@@ -224,10 +168,6 @@ export const authController = {
         "If an account exists with that email, a password reset link has been sent.",
     });
   },
-
-  /* ------------------------------------------------------------------------ */
-  /*                           RESET PASSWORD                                 */
-  /* ------------------------------------------------------------------------ */
 
   async resetPassword(req: Request, res: Response): Promise<void> {
     const { token, password } = req.body;
