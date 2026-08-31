@@ -1,7 +1,17 @@
-import mongoose, { model, Schema, type Document, type Types } from "mongoose";
+import mongoose, {
+  model,
+  Schema,
+  type HydratedDocument,
+  type Types,
+} from "mongoose";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-export interface IProduct extends Document {
-  _id: Types.ObjectId;
+/**
+ * The persisted shape only. It deliberately does not extend `Document` —
+ * that is what `HydratedDocument` is for, and mixing the two makes
+ * `Partial<IProduct>` include every mongoose method.
+ */
+export interface IProduct {
   owner: Types.ObjectId;
   categoryId: Types.ObjectId;
   name: string;
@@ -13,23 +23,26 @@ export interface IProduct extends Document {
   tags: string[];
   isFeatured: boolean;
   ratingCount: number;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
+
+export type ProductDocument = HydratedDocument<IProduct>;
 
 const productSchema = new Schema<IProduct>(
   {
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      requried: true,
+      required: true,
       index: true,
     },
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      requried: true,
+      required: true,
+      index: true,
     },
     name: {
       type: String,
@@ -52,10 +65,9 @@ const productSchema = new Schema<IProduct>(
       default: [],
       validate: {
         validator: (arr: string[]) => arr.length > 0,
-        message: "At least one product image is requried",
+        message: "At least one product image is required",
       },
     },
-
     price: {
       type: Number,
       required: true,
@@ -89,5 +101,9 @@ const productSchema = new Schema<IProduct>(
 );
 
 productSchema.index({ name: "text", description: "text", tags: "text" });
+productSchema.plugin(mongooseAggregatePaginate);
 
-export const Product = model<IProduct>("Product", productSchema);
+export const Product = model<
+  IProduct,
+  mongoose.AggregatePaginateModel<IProduct>
+>("Product", productSchema);
