@@ -10,6 +10,8 @@ import { corsOrigins, env, isProduction } from "./config/env.js";
 // routes
 import cartRoutes from "./modules/cart/cart.routes.js";
 import categoryRoutes from "./modules/category/category.routes.js";
+import orderRoutes from "./modules/orders/order.routes.js";
+import paymentRoutes from "./modules/payments/payment.routes.js";
 import productRoutes from "./modules/products/product.routes.js";
 import userRoutes from "./modules/users/user.routes.js";
 import { ApiError } from "./utils/ApiError.js";
@@ -42,6 +44,8 @@ export function createApplication(): Express {
   app.use("/api/v1/products", productRoutes);
   app.use("/api/v1/categories", categoryRoutes);
   app.use("/api/v1/cart", cartRoutes);
+  app.use("/api/v1/orders", orderRoutes);
+  app.use("/api/v1/payments", paymentRoutes);
 
   // Unmatched routes: answer in the same JSON shape as every other error
   // instead of Express's default HTML 404, which breaks API clients.

@@ -31,6 +31,27 @@ const envSchema = z.object({
 
   /** Comma-separated list of browser origins allowed to call the API. */
   CORS_ORIGINS: z.string().optional().default("http://localhost:5173"),
+
+  /**
+   * Where the browser is sent back to after a payment. eSewa redirects the
+   * *browser*, not an API client, so both of these have to be absolute
+   * URLs reachable from the customer's machine — not container hostnames.
+   */
+  CLIENT_URL: z.url().optional().default("http://localhost:5173"),
+  SERVER_URL: z.url().optional().default("http://localhost:8000"),
+
+  /**
+   * eSewa ePay v2. Optional as a group: while they are unset the payment
+   * routes answer 503 and the rest of the API runs normally, the same deal
+   * as CLERK_WEBHOOK_SECRET.
+   *
+   * `ESEWA_ENV=test` targets rc-epay (the sandbox) with the published test
+   * merchant `EPAYTEST`; `production` targets the live gateway and needs
+   * the credentials eSewa issues to the merchant.
+   */
+  ESEWA_ENV: z.enum(["test", "production"]).optional().default("test"),
+  ESEWA_PRODUCT_CODE: z.string().trim().min(1).optional(),
+  ESEWA_SECRET_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
