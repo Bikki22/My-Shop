@@ -1,25 +1,29 @@
 import { Types, type PipelineStage } from "mongoose";
+import { shippingFeeFor } from "../../config/platform.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { isDuplicateKeyError, money } from "../../utils/mongo.js";
 import { Product, type ProductDocument } from "../products/product.model.js";
 import type { IUserDocument } from "../users/user.model.js";
+import { SELLABLE_STATUS } from "../vendors/vendor.model.js";
 import { Cart, MAX_ITEM_QUANTITY } from "./cart.model.js";
 import type { AddCartItemInput } from "./cart.validation.js";
 
-/** MongoServerError code for a unique-index violation. */
-const DUPLICATE_KEY = 11000;
-
-const isDuplicateKeyError = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { code?: unknown }).code === DUPLICATE_KEY;
-
-/** One cart line, joined against the live product. */
+/** One cart line, joined against the live product and its shop. */
 export interface CartItemView {
   productId: Types.ObjectId;
   name: string | null;
   brand: string | null;
   image: string | null;
   categoryId: Types.ObjectId | null;
+  /**
+   * Which shop sells this line. Carried on every line because checkout
+   * splits the cart by it — see `OrderService.checkout`.
+   */
+  vendorId: Types.ObjectId | null;
+  vendorName: string | null;
+  vendorSlug: string | null;
+  /** False once the shop is no longer approved to sell. */
+  vendorActive: boolean;
   price: number;
   stock: number;
   quantity: number;
@@ -31,12 +35,35 @@ export interface CartItemView {
   lineTotal: number;
 }
 
+/**
+ * The lines from one shop, priced as they will be charged.
+ *
+ * A marketplace cart is really N carts wearing a trenchcoat: each shop
+ * ships its own parcel and is charged its own delivery fee, so the totals
+ * the customer is shown have to be grouped the same way the order will be.
+ */
+export interface CartGroupView {
+  vendorId: Types.ObjectId | null;
+  vendorName: string | null;
+  vendorSlug: string | null;
+  vendorActive: boolean;
+  items: CartItemView[];
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+}
+
 export interface CartSummary {
   itemCount: number;
   totalQuantity: number;
   subtotal: number;
+  /** Sum of every shop's delivery fee — one parcel per shop. */
+  shippingFee: number;
+  grandTotal: number;
+  vendorCount: number;
   unavailableCount: number;
-  /** True when at least one line is deleted or short on stock. */
+  inactiveShopCount: number;
+  /** True when a line is deleted, short on stock, or from a closed shop. */
   hasIssues: boolean;
 }
 
@@ -44,7 +71,19 @@ export interface CartView {
   _id: Types.ObjectId | null;
   user: Types.ObjectId;
   items: CartItemView[];
+  groups: CartGroupView[];
   summary: CartSummary;
+}
+
+/** What the aggregation returns, before the per-shop grouping is folded in. */
+interface RawCartView {
+  _id: Types.ObjectId | null;
+  user: Types.ObjectId;
+  items: CartItemView[];
+  totalQuantity: number;
+  unavailableCount: number;
+  outOfStockCount: number;
+  inactiveShopCount: number;
 }
 
 /** The badge in the header needs counts, not the whole joined cart. */
@@ -64,10 +103,12 @@ export class CartService {
    * anything gets the same empty shape as one whose cart was cleared.
    */
   async getMine(user: IUserDocument): Promise<CartView> {
-    const [view] = await Cart.aggregate<CartView>(
+    const [raw] = await Cart.aggregate<RawCartView>(
       CartService.viewPipeline(user._id),
     );
-    return view ?? CartService.emptyView(user._id);
+    return raw
+      ? CartService.withGroups(raw)
+      : CartService.emptyView(user._id);
   }
 
   async getCounts(user: IUserDocument): Promise<CartCounts> {
@@ -262,12 +303,92 @@ export class CartService {
       _id: null,
       user: userId,
       items: [],
+      groups: [],
       summary: {
         itemCount: 0,
         totalQuantity: 0,
         subtotal: 0,
+        shippingFee: 0,
+        grandTotal: 0,
+        vendorCount: 0,
         unavailableCount: 0,
+        inactiveShopCount: 0,
         hasIssues: false,
+      },
+    };
+  }
+
+  /**
+   * Folds the flat lines into per-shop groups and totals the cart.
+   *
+   * Deliberately done here rather than in the pipeline: the delivery fee
+   * comes from `PRICING_POLICY`, and re-expressing that policy as `$cond`
+   * stages would give the marketplace two places to change a price and one
+   * of them would eventually be missed. The checkout prices sub-orders the
+   * same way, from the same constant.
+   */
+  private static withGroups(raw: RawCartView): CartView {
+    const byVendor = new Map<string, CartGroupView>();
+
+    for (const item of raw.items) {
+      // A deleted product has no shop to attribute the line to; it still
+      // has to appear in the cart so the customer can remove it.
+      const key = item.vendorId?.toString() ?? "unknown";
+
+      let group = byVendor.get(key);
+      if (!group) {
+        group = {
+          vendorId: item.vendorId,
+          vendorName: item.vendorName,
+          vendorSlug: item.vendorSlug,
+          vendorActive: item.vendorActive,
+          items: [],
+          subtotal: 0,
+          shippingFee: 0,
+          total: 0,
+        };
+        byVendor.set(key, group);
+      }
+
+      group.items.push(item);
+      group.subtotal = money(group.subtotal + item.lineTotal);
+    }
+
+    const groups = [...byVendor.values()].map((group) => {
+      const shippingFee = shippingFeeFor(group.subtotal);
+      return {
+        ...group,
+        shippingFee,
+        total: money(group.subtotal + shippingFee),
+      };
+    });
+
+    const subtotal = money(
+      groups.reduce((sum, group) => sum + group.subtotal, 0),
+    );
+    const shippingFee = money(
+      groups.reduce((sum, group) => sum + group.shippingFee, 0),
+    );
+
+    return {
+      _id: raw._id,
+      user: raw.user,
+      items: raw.items,
+      groups,
+      summary: {
+        itemCount: raw.items.length,
+        totalQuantity: raw.totalQuantity,
+        subtotal,
+        shippingFee,
+        grandTotal: money(subtotal + shippingFee),
+        vendorCount: groups.length,
+        unavailableCount: raw.unavailableCount,
+        inactiveShopCount: raw.inactiveShopCount,
+        hasIssues:
+          raw.unavailableCount +
+            raw.outOfStockCount +
+            raw.inactiveShopCount >
+          0,
       },
     };
   }
@@ -311,6 +432,7 @@ export class CartService {
                 price: 1,
                 stock: 1,
                 categoryId: 1,
+                vendor: 1,
                 image: { $first: "$images" },
               },
             },
@@ -319,6 +441,22 @@ export class CartService {
         },
       },
       { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        // The shop, for grouping and for the "is this still on sale?"
+        // check. A shop suspended after the item was added has to stop the
+        // line at checkout, so its status is read live rather than trusted
+        // from whenever the product was cached.
+        $lookup: {
+          from: "vendors",
+          let: { vendorId: "$product.vendor" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$vendorId"] } } },
+            { $project: { _id: 1, name: 1, slug: 1, status: 1 } },
+          ],
+          as: "vendor",
+        },
+      },
+      { $unwind: { path: "$vendor", preserveNullAndEmptyArrays: true } },
       {
         // Null for the empty-cart row, so the `$group` below can push it and
         // the final `$filter` can drop it — `$group` cannot skip a document.
@@ -332,6 +470,15 @@ export class CartService {
                 brand: { $ifNull: ["$product.brand", null] },
                 image: { $ifNull: ["$product.image", null] },
                 categoryId: { $ifNull: ["$product.categoryId", null] },
+                vendorId: { $ifNull: ["$vendor._id", null] },
+                vendorName: { $ifNull: ["$vendor.name", null] },
+                vendorSlug: { $ifNull: ["$vendor.slug", null] },
+                vendorActive: {
+                  $eq: [
+                    { $ifNull: ["$vendor.status", null] },
+                    SELLABLE_STATUS,
+                  ],
+                },
                 price: { $ifNull: ["$product.price", 0] },
                 stock: { $ifNull: ["$product.stock", 0] },
                 quantity: "$items.quantity",
@@ -362,8 +509,6 @@ export class CartService {
           _id: "$_id",
           user: { $first: "$user" },
           items: { $push: "$line" },
-          // A deleted product prices at 0, so it cannot inflate the total.
-          subtotal: { $sum: { $ifNull: ["$line.lineTotal", 0] } },
           totalQuantity: { $sum: { $ifNull: ["$line.quantity", 0] } },
           unavailableCount: {
             $sum: {
@@ -383,6 +528,23 @@ export class CartService {
               ],
             },
           },
+          // Only counted for lines whose product still exists: a deleted
+          // product is already reported as unavailable, and reporting it
+          // twice would tell the customer to fix two problems that are one.
+          inactiveShopCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: [{ $ifNull: ["$line.isAvailable", false] }, true] },
+                    { $eq: [{ $ifNull: ["$line.vendorActive", true] }, false] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
         },
       },
       {
@@ -397,21 +559,17 @@ export class CartService {
         },
       },
       {
+        // Flat lines plus the counts. The per-shop grouping and every money
+        // total are folded in by `withGroups`, so the delivery-fee policy
+        // stays in `config/platform.ts` instead of being restated in `$cond`.
         $project: {
           _id: 1,
           user: 1,
           items: 1,
-          summary: {
-            itemCount: { $size: "$items" },
-            totalQuantity: "$totalQuantity",
-            // Floating-point prices accumulate error over a long cart, so
-            // the total is rounded once, at the end.
-            subtotal: { $round: ["$subtotal", 2] },
-            unavailableCount: "$unavailableCount",
-            hasIssues: {
-              $gt: [{ $add: ["$unavailableCount", "$outOfStockCount"] }, 0],
-            },
-          },
+          totalQuantity: 1,
+          unavailableCount: 1,
+          outOfStockCount: 1,
+          inactiveShopCount: 1,
         },
       },
     ];

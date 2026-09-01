@@ -52,10 +52,21 @@ export const getAllProductsQuerySchema = paginationQuerySchema.extend({
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   tags: z.string().trim().optional(), // comma-separated, split in the service
+  /** Narrow the catalogue to one shop — the marketplace's primary facet. */
+  vendor: objectIdSchema.optional(),
+  categoryId: objectIdSchema.optional(),
   sort: z
     .enum(["price_asc", "price_desc", "newest"])
     .optional()
     .default("newest"),
+});
+
+export const vendorSlugParamSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Invalid shop slug"),
 });
 
 export const removeProductSubImageBodySchema = z.object({

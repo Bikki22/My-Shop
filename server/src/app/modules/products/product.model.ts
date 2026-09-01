@@ -12,7 +12,19 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
  * `Partial<IProduct>` include every mongoose method.
  */
 export interface IProduct {
+  /**
+   * The *user* who owns the listing. Kept alongside `vendor` because every
+   * permission check is "is this yours?", and answering that from the
+   * product alone avoids a lookup on the shop for each write.
+   */
   owner: Types.ObjectId;
+  /**
+   * The *shop* the listing belongs to. This is the grouping key for the
+   * whole marketplace: storefronts, per-vendor order splitting, commission
+   * and payouts all hang off it. Set from the owner's approved shop at
+   * creation and never transferable afterwards.
+   */
+  vendor: Types.ObjectId;
   categoryId: Types.ObjectId;
   name: string;
   description: string;
@@ -37,6 +49,11 @@ const productSchema = new Schema<IProduct>(
       ref: "User",
       required: true,
       index: true,
+    },
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vendor",
+      required: true,
     },
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -99,6 +116,11 @@ const productSchema = new Schema<IProduct>(
   },
   { timestamps: true },
 );
+
+// A storefront is always "this shop's live listings, newest first", so the
+// vendor index carries the soft-delete filter and the sort with it rather
+// than leaving Mongo to sort the whole matched set in memory.
+productSchema.index({ vendor: 1, deletedAt: 1, createdAt: -1 });
 
 productSchema.index({ name: "text", description: "text", tags: "text" });
 productSchema.plugin(mongooseAggregatePaginate);

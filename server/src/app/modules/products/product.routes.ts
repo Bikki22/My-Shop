@@ -14,6 +14,7 @@ import {
   productIdParamSchema,
   removeProductSubImageBodySchema,
   updateProductBodySchema,
+  vendorSlugParamSchema,
 } from "./product.validation.js";
 
 const router = Router();
@@ -31,6 +32,14 @@ router.get(
   validateParams(categoryIdParamSchema),
   validateQuery(paginationQuerySchema),
   productController.getByCategory,
+);
+
+/** A shop's storefront. Two segments, so `/:id` can never shadow it. */
+router.get(
+  "/shop/:slug",
+  validateParams(vendorSlugParamSchema),
+  validateQuery(getAllProductsQuerySchema),
+  productController.getByVendorSlug,
 );
 
 router.get(

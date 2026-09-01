@@ -1,6 +1,7 @@
 import mongoose, { Types } from "mongoose";
 import { ApiError } from "../../utils/ApiError.js";
 import type { IUserDocument, UserRole } from "../users/user.model.js";
+import { vendorService, VendorService } from "../vendors/vendor.service.js";
 import type { IProduct, ProductDocument } from "./product.model.js";
 import {
   productRepository,
@@ -63,28 +64,77 @@ export class ProductService {
     return this.repository.findByCategory(categoryId, page);
   }
 
+  /**
+   * A shop's storefront, addressed by its public slug.
+   *
+   * Resolving the slug through the vendor service rather than joining here
+   * is what keeps a suspended shop's listings off the site: that lookup is
+   * already scoped to approved shops, so an unapproved slug 404s before
+   * any product is read.
+   */
+  async getByVendorSlug(slug: string, query: GetAllProductsQuery) {
+    const vendor = await vendorService.getBySlug(slug);
+    const { page, limit, sort } = query;
+
+    return this.repository.findByVendor(
+      vendor._id,
+      ProductService.SORT_STAGES[sort],
+      { page, limit },
+    );
+  }
+
   // ---------- Commands ----------
 
-  create(input: CreateProductInput, owner: IUserDocument) {
-    return this.repository.create({
+  /**
+   * Lists a new product under the caller's shop.
+   *
+   * The vendor is resolved from the caller rather than accepted from the
+   * body — a `vendorId` a client could send is a client choosing whose
+   * shop to sell from, and whose bank account the money lands in.
+   */
+  async create(input: CreateProductInput, user: IUserDocument) {
+    const vendor = await vendorService.requireSellingVendor(user);
+
+    const product = await this.repository.create({
       ...input,
       categoryId: new Types.ObjectId(input.categoryId),
-      owner: owner._id,
+      owner: user._id,
+      vendor: vendor._id,
     });
+
+    await VendorService.adjustProductCount(vendor._id, 1);
+
+    return product;
   }
 
   async update(id: string, input: UpdateProductInput, user: IUserDocument) {
-    await this.loadManageable(id, user);
-    return this.repository.updateById(id, ProductService.toUpdateData(input));
+    const product = await this.loadManageable(id, user);
+    await ProductService.assertMaySell(user);
+
+    return this.repository.updateById(
+      product._id.toString(),
+      ProductService.toUpdateData(input),
+    );
   }
 
+  /**
+   * Soft-deletes the listing.
+   *
+   * Deliberately *not* gated on the shop being able to sell: a suspended
+   * vendor taking its own listings down is exactly what we want it to do,
+   * and blocking that would strand products on a storefront nobody can
+   * fulfil from.
+   */
   async remove(id: string, user: IUserDocument): Promise<void> {
-    await this.loadManageable(id, user);
-    await this.repository.softDeleteById(id);
+    const product = await this.loadManageable(id, user);
+
+    await this.repository.softDeleteById(product._id.toString());
+    await VendorService.adjustProductCount(product.vendor, -1);
   }
 
   async removeSubImage(id: string, imageUrl: string, user: IUserDocument) {
     const product = await this.loadManageable(id, user);
+    await ProductService.assertMaySell(user);
 
     if (!product.images.includes(imageUrl)) {
       throw ApiError.notFound("Image not found on this product");
@@ -128,14 +178,34 @@ export class ProductService {
     );
   }
 
+  /**
+   * Asserts the caller's shop is in good standing before it changes what
+   * is on sale.
+   *
+   * Admins skip the check: they are moderating someone else's listing and
+   * have no shop of their own to be approved.
+   */
+  private static async assertMaySell(user: IUserDocument): Promise<void> {
+    if (ProductService.PRIVILEGED_ROLES.includes(user.role)) return;
+    await vendorService.requireSellingVendor(user);
+  }
+
   private static buildFilter(
     query: GetAllProductsQuery,
   ): mongoose.QueryFilter<IProduct> {
-    const { search, minPrice, maxPrice, tags } = query;
+    const { search, minPrice, maxPrice, tags, vendor, categoryId } = query;
     const filter: mongoose.QueryFilter<IProduct> = {};
 
     if (search) {
       filter.$text = { $search: search };
+    }
+
+    if (vendor) {
+      filter.vendor = new Types.ObjectId(vendor);
+    }
+
+    if (categoryId) {
+      filter.categoryId = new Types.ObjectId(categoryId);
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {

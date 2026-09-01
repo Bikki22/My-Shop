@@ -111,9 +111,16 @@ export interface IOrder {
   /** Human-quotable reference (`ORD-20260901-K3F9QZ`); unique. */
   orderNumber: string;
   user: Types.ObjectId;
-  items: IOrderItem[];
   shippingAddress: IShippingAddress;
+  /** The whole basket's money, summed from the sub-orders. */
   pricing: IOrderPricing;
+  /** How many shops this order was split across, and how many lines total. */
+  vendorCount: number;
+  itemCount: number;
+  /**
+   * Derived from the sub-orders, never set directly — an order is only as
+   * far along as its least-advanced shop. See `OrderService.deriveStatus`.
+   */
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
@@ -129,7 +136,12 @@ export interface IOrder {
 
 export type OrderDocument = HydratedDocument<IOrder>;
 
-const orderItemSchema = new Schema<IOrderItem>(
+/**
+ * Exported because `SubOrder` stores the same shapes. Sharing the schema
+ * objects rather than redeclaring them is what keeps a line, a price
+ * breakdown or a history entry identical on both sides of the split.
+ */
+export const orderItemSchema = new Schema<IOrderItem>(
   {
     productId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -181,7 +193,7 @@ const shippingAddressSchema = new Schema<IShippingAddress>(
   { _id: false },
 );
 
-const orderPricingSchema = new Schema<IOrderPricing>(
+export const orderPricingSchema = new Schema<IOrderPricing>(
   {
     subtotal: { type: Number, required: true, min: 0 },
     shippingFee: { type: Number, required: true, min: 0, default: 0 },
@@ -192,7 +204,7 @@ const orderPricingSchema = new Schema<IOrderPricing>(
   { _id: false },
 );
 
-const orderStatusEventSchema = new Schema<IOrderStatusEvent>(
+export const orderStatusEventSchema = new Schema<IOrderStatusEvent>(
   {
     status: { type: String, enum: [...ORDER_STATUSES], required: true },
     at: { type: Date, default: Date.now },
@@ -224,14 +236,18 @@ const orderSchema = new Schema<IOrder>(
       required: true,
     },
 
-    items: {
-      type: [orderItemSchema],
+    // The lines themselves live on the sub-orders — one set per shop. What
+    // stays here is the shape of the split, so a list of orders can render
+    // "3 items from 2 shops" without joining every sub-order.
+    vendorCount: { type: Number, required: true, min: 1 },
+    itemCount: {
+      type: Number,
       required: true,
-      validate: {
-        validator: (items: IOrderItem[]) =>
-          items.length > 0 && items.length <= MAX_ORDER_ITEMS,
-        message: `An order must have between 1 and ${String(MAX_ORDER_ITEMS)} items`,
-      },
+      min: [1, "An order must have at least one item"],
+      max: [
+        MAX_ORDER_ITEMS,
+        `An order cannot contain more than ${String(MAX_ORDER_ITEMS)} items`,
+      ],
     },
 
     shippingAddress: { type: shippingAddressSchema, required: true },
@@ -284,9 +300,8 @@ orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
 orderSchema.index({ paymentStatus: 1, createdAt: -1 });
 
-// Lets a stock audit (or a merchant's sales view) find every order a
-// product appears in without scanning the collection.
-orderSchema.index({ "items.productId": 1 });
+// A product's sales history is answered from `SubOrder` now — that is
+// where the lines live, and its `items.productId` index covers it.
 
 // Orders are never deleted — cancelling is a status, not a removal — so
 // unlike products and categories there is no `deletedAt` here, and reads

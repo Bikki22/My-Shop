@@ -4,6 +4,7 @@ import {
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
 } from "./order.model.js";
+import { PAYOUT_STATES } from "./sub-order.model.js";
 
 const objectIdSchema = z
   .string()
@@ -66,13 +67,6 @@ export const createOrderBodySchema = z
   })
   .strict();
 
-export const updateOrderStatusBodySchema = z
-  .object({
-    status: z.enum(ORDER_STATUSES),
-    note: z.string().trim().max(200).optional(),
-  })
-  .strict();
-
 export const updatePaymentStatusBodySchema = z
   .object({
     paymentStatus: z.enum(PAYMENT_STATUSES),
@@ -90,8 +84,37 @@ export const cancelOrderBodySchema = z
   })
   .strict();
 
+/**
+ * A vendor moving their own parcel along.
+ *
+ * `courier`/`trackingNumber` are only meaningful alongside `SHIPPED`, so
+ * the refine rejects them elsewhere rather than storing a tracking number
+ * against an order that has not left the warehouse.
+ */
+export const updateSubOrderStatusBodySchema = z
+  .object({
+    status: z.enum(ORDER_STATUSES),
+    note: z.string().trim().max(200).optional(),
+    courier: z.string().trim().max(60).optional(),
+    trackingNumber: z.string().trim().max(60).optional(),
+  })
+  .strict()
+  .refine(
+    (data) =>
+      data.status === "SHIPPED" ||
+      (data.courier === undefined && data.trackingNumber === undefined),
+    {
+      message: "Courier and tracking number can only be set when shipping",
+      path: ["courier"],
+    },
+  );
+
 export const orderIdParamSchema = z.object({
   id: objectIdSchema,
+});
+
+export const subOrderIdParamSchema = z.object({
+  subOrderId: objectIdSchema,
 });
 
 export const orderNumberParamSchema = z.object({
@@ -126,12 +149,31 @@ export const listOrdersQuerySchema = listMyOrdersQuerySchema.extend({
   to: z.coerce.date().optional(),
 });
 
+/**
+ * The per-shop queues: a vendor's own, and the platform-wide one.
+ *
+ * `vendor` is honoured only for admins — `OrderService.listForVendor`
+ * overrides it with the caller's own shop id, so a vendor cannot read
+ * another shop's queue by supplying one.
+ */
+export const listSubOrdersQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(ORDER_STATUSES).optional(),
+  paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+  payoutState: z.enum(PAYOUT_STATES).optional(),
+  vendor: objectIdSchema.optional(),
+  orderNumber: z.string().trim().min(3).max(40).optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  sort: orderSortSchema,
+});
+
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
+export type UpdateSubOrderStatusInput = z.infer<
+  typeof updateSubOrderStatusBodySchema
+>;
+export type ListSubOrdersQuery = z.infer<typeof listSubOrdersQuerySchema>;
 export type ShippingAddressInput = z.infer<typeof shippingAddressSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderBodySchema>;
-export type UpdateOrderStatusInput = z.infer<
-  typeof updateOrderStatusBodySchema
->;
 export type UpdatePaymentStatusInput = z.infer<
   typeof updatePaymentStatusBodySchema
 >;

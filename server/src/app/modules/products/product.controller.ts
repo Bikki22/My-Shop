@@ -51,6 +51,14 @@ export class ProductController {
     return res.status(200).json({ success: true, ...result });
   });
 
+  getByVendorSlug = asyncHandler<{ slug: string }>(async (req, res) => {
+    const result = await this.service.getByVendorSlug(
+      req.params.slug,
+      req.validatedQuery as GetAllProductsQuery,
+    );
+    return res.status(200).json({ success: true, ...result });
+  });
+
   create = asyncHandler(async (req, res) => {
     const product = await this.service.create(
       req.body as CreateProductInput,

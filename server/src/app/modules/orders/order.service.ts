@@ -1,10 +1,26 @@
 import { randomBytes } from "node:crypto";
 import { Types, type QueryFilter } from "mongoose";
+import {
+  commissionRateFor,
+  PRICING_POLICY,
+  shippingFeeFor,
+} from "../../config/platform.js";
 import { ApiError } from "../../utils/ApiError.js";
+import {
+  isDuplicateKeyError,
+  money,
+  NOT_DELETED,
+  prefixRegex,
+} from "../../utils/mongo.js";
 import { Cart } from "../cart/cart.model.js";
 import { cartService, type CartItemView } from "../cart/cart.service.js";
 import { Product } from "../products/product.model.js";
 import type { IUserDocument, UserRole } from "../users/user.model.js";
+import {
+  SELLABLE_STATUS,
+  Vendor,
+  type VendorDocument,
+} from "../vendors/vendor.model.js";
 import {
   MAX_ORDER_ITEMS,
   Order,
@@ -16,45 +32,22 @@ import {
   type OrderStatus,
   type PaymentStatus,
 } from "./order.model.js";
+import {
+  SubOrder,
+  type ISubOrder,
+  type ISubOrderEarnings,
+  type PayoutState,
+  type SubOrderDocument,
+} from "./sub-order.model.js";
 import type {
   CreateOrderInput,
   ListMyOrdersQuery,
   ListOrdersQuery,
-  UpdateOrderStatusInput,
+  ListSubOrdersQuery,
+  UpdateSubOrderStatusInput,
 } from "./order.validation.js";
 
-/** MongoServerError code for a unique-index violation. */
-const DUPLICATE_KEY = 11000;
-
-const isDuplicateKeyError = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { code?: unknown }).code === DUPLICATE_KEY;
-
-/**
- * Money is stored as a plain number, so every derived figure is rounded to
- * cents at the point it is computed — otherwise `0.1 + 0.2` style error
- * accumulates across lines and the total the customer agreed to no longer
- * matches the sum of what they see.
- */
-const money = (value: number): number => Math.round(value * 100) / 100;
-
-/**
- * The shop's charging policy, in one place.
- *
- * These are placeholders for a real pricing service (or a settings
- * collection); they live here so there is exactly one thing to change when
- * the real numbers arrive, rather than a literal buried in the checkout.
- */
-export const PRICING_POLICY = {
-  /** Flat rate, waived once the order is big enough. */
-  shippingFee: 49,
-  freeShippingThreshold: 999,
-  /** Fraction of the subtotal, e.g. 0.13 for 13%. */
-  taxRate: 0,
-} as const;
-
-/** How many times a collided random order number is regenerated. */
+/** How many times a collided order number is regenerated. */
 const ORDER_NUMBER_ATTEMPTS = 5;
 
 /** What has to go back on the shelf if a checkout unwinds. */
@@ -64,14 +57,32 @@ interface StockLine {
   name: string;
 }
 
+/** One shop's slice of the cart, priced and split. */
+interface VendorSlice {
+  vendor: VendorDocument;
+  items: IOrderItem[];
+  pricing: IOrderPricing;
+  earnings: ISubOrderEarnings;
+}
+
 export interface OrderPage {
   data: OrderDocument[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
+export interface SubOrderPage {
+  data: SubOrderDocument[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
+/**
+ * An order and its per-shop parts. Nothing useful can be said about an
+ * order without them — the lines, the statuses and most of the money live
+ * on the sub-orders — so every read that returns an order returns these.
+ */
+export interface OrderWithSubOrders {
+  order: OrderDocument;
+  subOrders: SubOrderDocument[];
 }
 
 export class OrderService {
@@ -81,9 +92,13 @@ export class OrderService {
   ];
 
   /**
-   * The state machine, spelled out. Everything not listed is refused, so a
-   * new status can never accidentally become reachable from everywhere —
-   * `DELIVERED` and `CANCELLED` are terminal by having no successors.
+   * The fulfilment state machine, spelled out. Everything not listed is
+   * refused, so a new status can never accidentally become reachable from
+   * everywhere — `DELIVERED` and `CANCELLED` are terminal by having no
+   * successors.
+   *
+   * It applies to a **sub-order**: fulfilment is per shop now, and a
+   * customer's order is only as far along as its least-advanced part.
    */
   private static readonly ALLOWED_TRANSITIONS: Record<
     OrderStatus,
@@ -114,6 +129,23 @@ export class OrderService {
     REFUNDED: [],
   };
 
+  /**
+   * How far along each status is.
+   *
+   * This ordering is what `deriveStatus` reduces over: an order that is
+   * half shipped and half still being packed is a *processing* order, not a
+   * shipped one, because the customer has not received everything.
+   * `CANCELLED` is absent — a cancelled part is excluded, not ranked.
+   */
+  private static readonly STATUS_RANK: Record<OrderStatus, number> = {
+    PENDING: 0,
+    CONFIRMED: 1,
+    PROCESSING: 2,
+    SHIPPED: 3,
+    DELIVERED: 4,
+    CANCELLED: 5,
+  };
+
   private static readonly SORT_STAGES: Record<
     ListOrdersQuery["sort"],
     Record<string, 1 | -1>
@@ -124,7 +156,7 @@ export class OrderService {
     total_asc: { "pricing.grandTotal": 1 },
   };
 
-  // ---------- Queries ----------
+  // ---------- Queries: customer ----------
 
   /** The signed-in customer's own orders. */
   listMine(user: IUserDocument, query: ListMyOrdersQuery): Promise<OrderPage> {
@@ -135,17 +167,29 @@ export class OrderService {
     return OrderService.page(filter, query);
   }
 
-  /** Admin queue: every order, narrowed by the listing filters. */
-  list(query: ListOrdersQuery): Promise<OrderPage> {
-    return OrderService.page(OrderService.buildFilter(query), query);
+  /**
+   * One order with its parts, readable by the customer who placed it or by
+   * an admin. The ownership check lives here rather than in the route so
+   * both the id and the order-number lookups get it.
+   */
+  async getForUser(
+    id: string,
+    user: IUserDocument,
+  ): Promise<OrderWithSubOrders> {
+    return OrderService.withSubOrders(await this.getOrderForUser(id, user));
   }
 
   /**
-   * One order, readable by the customer who placed it or by an admin.
-   * The ownership check lives here rather than in the route so both the
-   * id and the order-number lookups get it.
+   * The parent order alone, with the same ownership rule.
+   *
+   * For callers that genuinely only need the envelope — the payments
+   * module works against the order's total and payment state, and loading
+   * every sub-order to throw them away is a query for nothing.
    */
-  async getForUser(id: string, user: IUserDocument): Promise<OrderDocument> {
+  async getOrderForUser(
+    id: string,
+    user: IUserDocument,
+  ): Promise<OrderDocument> {
     const order = await OrderService.loadById(id);
     OrderService.assertReadable(order, user);
     return order;
@@ -154,45 +198,91 @@ export class OrderService {
   async getByNumber(
     orderNumber: string,
     user: IUserDocument,
-  ): Promise<OrderDocument> {
+  ): Promise<OrderWithSubOrders> {
     const order = await Order.findOne({ orderNumber });
     if (!order) {
       throw ApiError.notFound("Order not found");
     }
     OrderService.assertReadable(order, user);
-    return order;
+    return OrderService.withSubOrders(order);
   }
 
-  // ---------- Commands ----------
+  // ---------- Queries: admin ----------
+
+  /** Admin queue: every order, narrowed by the listing filters. */
+  list(query: ListOrdersQuery): Promise<OrderPage> {
+    return OrderService.page(OrderService.buildFilter(query), query);
+  }
+
+  /** The platform-wide fulfilment queue, across every shop. */
+  listSubOrders(query: ListSubOrdersQuery): Promise<SubOrderPage> {
+    return OrderService.pageSubOrders(
+      OrderService.buildSubOrderFilter(query),
+      query,
+    );
+  }
+
+  // ---------- Queries: vendor ----------
 
   /**
-   * Turns the caller's cart into an order.
+   * The shop's own order queue.
+   *
+   * Scoped to the caller's vendor id rather than filtered by a `vendor`
+   * query parameter: a filter a client supplies is a client choosing whose
+   * orders to read.
+   */
+  async listForVendor(
+    user: IUserDocument,
+    query: ListSubOrdersQuery,
+  ): Promise<SubOrderPage> {
+    const vendor = await OrderService.vendorOf(user);
+
+    return OrderService.pageSubOrders(
+      { ...OrderService.buildSubOrderFilter(query), vendor: vendor._id },
+      query,
+    );
+  }
+
+  async getSubOrderForVendor(
+    user: IUserDocument,
+    subOrderId: string,
+  ): Promise<SubOrderDocument> {
+    const subOrder = await OrderService.loadSubOrder(subOrderId);
+    await OrderService.assertSubOrderManageable(subOrder, user);
+    return subOrder;
+  }
+
+  // ---------- Commands: checkout ----------
+
+  /**
+   * Turns the caller's cart into an order, split one sub-order per shop.
    *
    * The sequence matters, and it is the only interesting thing in this
    * module:
    *
-   *   1. price the cart (server-side — the client sends no money figures),
+   *   1. price the cart per shop (server-side — the client sends no money),
    *   2. decrement stock line by line, each guarded by `stock >= quantity`,
-   *   3. insert the order,
-   *   4. drop the ordered lines from the cart.
+   *   3. insert the parent order,
+   *   4. insert one sub-order per shop,
+   *   5. drop the ordered lines from the cart.
    *
-   * Steps 2–4 are not a transaction: this project targets a plain MongoDB
+   * Steps 2–5 are not a transaction: this project targets a plain MongoDB
    * deployment, and `session`-based transactions need a replica set. So a
-   * failure part-way through step 2 or 3 *compensates* instead — every
-   * reservation already taken is put back before the error is rethrown.
-   * The reservation itself is what keeps two customers from buying the
-   * same last unit: the conditional `$inc` is atomic per product, so the
-   * loser's update matches nothing and is reported as a 409 rather than
-   * silently overselling.
+   * failure part-way through *compensates* instead — every reservation
+   * already taken is put back, and a parent order whose sub-orders failed
+   * to insert is deleted, before the error is rethrown. The reservation
+   * itself is what keeps two customers from buying the same last unit: the
+   * conditional `$inc` is atomic per product, so the loser's update matches
+   * nothing and is reported as a 409 rather than silently overselling.
    *
-   * Step 4 is deliberately *not* compensated: once the order exists the
+   * Step 5 is deliberately *not* compensated: once the order exists the
    * checkout succeeded, and a cart that failed to clear is a cosmetic
    * problem, not a reason to fail (or unwind) a placed order.
    */
   async checkout(
     user: IUserDocument,
     input: CreateOrderInput,
-  ): Promise<OrderDocument> {
+  ): Promise<OrderWithSubOrders> {
     const cart = await cartService.getMine(user);
 
     if (cart.items.length === 0) {
@@ -206,16 +296,18 @@ export class OrderService {
 
     OrderService.assertPurchasable(cart.items);
 
-    const items = cart.items.map(OrderService.toOrderItem);
-    const pricing = OrderService.price(items);
+    const slices = await OrderService.split(cart.items);
+    const allItems = slices.flatMap((slice) => slice.items);
+    const pricing = OrderService.combine(slices);
 
-    await OrderService.reserveStock(items);
+    await OrderService.reserveStock(allItems);
 
     let order: OrderDocument;
     try {
-      order = await OrderService.insert({
+      order = await OrderService.insertOrder({
         user: user._id,
-        items,
+        vendorCount: slices.length,
+        itemCount: allItems.length,
         pricing,
         paymentMethod: input.paymentMethod,
         shippingAddress: {
@@ -230,98 +322,208 @@ export class OrderService {
         ],
       });
     } catch (error) {
-      await OrderService.releaseStock(items);
+      await OrderService.releaseStock(allItems);
       throw error;
     }
 
-    await OrderService.clearOrderedLines(user, items);
+    let subOrders: SubOrderDocument[];
+    try {
+      subOrders = await OrderService.insertSubOrders(order, slices);
+    } catch (error) {
+      // A parent with no parts is worse than no order at all: it would show
+      // up in the customer's history as an empty, unfulfillable row.
+      await Order.deleteOne({ _id: order._id }).catch((cleanupError: unknown) => {
+        console.error(
+          `Failed to remove order ${order.orderNumber} after its sub-orders could not be created`,
+          cleanupError,
+        );
+      });
+      await OrderService.releaseStock(allItems);
+      throw error;
+    }
 
-    return order;
+    await OrderService.clearOrderedLines(user, allItems);
+
+    return { order, subOrders };
   }
 
+  // ---------- Commands: cancellation ----------
+
   /**
-   * Customer-initiated cancellation, allowed only while the order has not
-   * shipped.
+   * Customer-initiated cancellation of the whole order.
+   *
+   * Cancels every part that has not shipped yet and leaves the rest alone,
+   * because that is the honest outcome: one shop having already handed a
+   * parcel to a courier is no reason to keep charging the customer for the
+   * two that haven't.
    */
   async cancelMine(
     user: IUserDocument,
     id: string,
     reason?: string,
-  ): Promise<OrderDocument> {
+  ): Promise<OrderWithSubOrders> {
     const order = await OrderService.loadById(id);
     OrderService.assertReadable(order, user);
 
-    if (!OrderService.CUSTOMER_CANCELLABLE.includes(order.status)) {
+    const subOrders = await SubOrder.find({ order: order._id });
+    const cancellable = subOrders.filter((subOrder) =>
+      OrderService.CUSTOMER_CANCELLABLE.includes(subOrder.status),
+    );
+
+    if (cancellable.length === 0) {
       throw ApiError.conflict(
-        `An order that is already ${order.status.toLowerCase()} cannot be cancelled — contact support instead`,
+        "Nothing in this order can still be cancelled — contact support instead",
       );
     }
 
-    return OrderService.applyCancellation(order, reason ?? null, user._id);
+    for (const subOrder of cancellable) {
+      await OrderService.applyCancellation(subOrder, reason ?? null, user._id);
+    }
+
+    await OrderService.syncParent(order._id);
+
+    return OrderService.withSubOrders(await OrderService.reload(order._id));
   }
 
+  /** Cancels just one shop's part, leaving the rest of the order standing. */
+  async cancelSubOrderMine(
+    user: IUserDocument,
+    subOrderId: string,
+    reason?: string,
+  ): Promise<SubOrderDocument> {
+    const subOrder = await OrderService.loadSubOrder(subOrderId);
+
+    if (
+      !subOrder.user.equals(user._id) &&
+      !OrderService.PRIVILEGED_ROLES.includes(user.role)
+    ) {
+      // A 403 here would confirm that a sub-order with that id exists.
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (!OrderService.CUSTOMER_CANCELLABLE.includes(subOrder.status)) {
+      throw ApiError.conflict(
+        `This part of your order is already ${subOrder.status.toLowerCase()} and cannot be cancelled — contact support instead`,
+      );
+    }
+
+    const cancelled = await OrderService.applyCancellation(
+      subOrder,
+      reason ?? null,
+      user._id,
+    );
+
+    await OrderService.syncParent(cancelled.order);
+
+    return cancelled;
+  }
+
+  // ---------- Commands: fulfilment ----------
+
   /**
-   * Admin-driven transition through the fulfilment states.
+   * Moves one shop's part through the fulfilment states.
    *
-   * The write is guarded on the status we read, so two admins clicking at
+   * Used by both the vendor (on their own sub-orders) and by admins (on
+   * any), because the transition rules are identical — only who is allowed
+   * to ask differs, and that is settled by `assertSubOrderManageable`.
+   *
+   * The write is guarded on the status we read, so two people clicking at
    * once cannot both apply a transition (and, for a cancellation, cannot
    * both restock).
    */
-  async updateStatus(
-    id: string,
-    input: UpdateOrderStatusInput,
+  async updateSubOrderStatus(
     actor: IUserDocument,
-  ): Promise<OrderDocument> {
-    const order = await OrderService.loadById(id);
+    subOrderId: string,
+    input: UpdateSubOrderStatusInput,
+  ): Promise<SubOrderDocument> {
+    const subOrder = await OrderService.loadSubOrder(subOrderId);
+    await OrderService.assertSubOrderManageable(subOrder, actor);
+
     const next = input.status;
     const note = input.note ?? null;
 
-    if (next === order.status) {
+    if (next === subOrder.status) {
       throw ApiError.badRequest(
-        `Order is already ${order.status.toLowerCase()}`,
+        `This part of the order is already ${subOrder.status.toLowerCase()}`,
       );
     }
 
-    if (!OrderService.ALLOWED_TRANSITIONS[order.status].includes(next)) {
+    if (!OrderService.ALLOWED_TRANSITIONS[subOrder.status].includes(next)) {
       throw ApiError.conflict(
-        `Cannot move an order from ${order.status.toLowerCase()} to ${next.toLowerCase()}`,
+        `Cannot move an order from ${subOrder.status.toLowerCase()} to ${next.toLowerCase()}`,
       );
     }
+
+    let updated: SubOrderDocument;
 
     if (next === "CANCELLED") {
-      return OrderService.applyCancellation(order, note, actor._id);
-    }
+      updated = await OrderService.applyCancellation(
+        subOrder,
+        note,
+        actor._id,
+      );
+    } else {
+      const set: Record<string, unknown> = { status: next };
 
-    const set: Record<string, unknown> = { status: next };
-
-    if (next === "DELIVERED") {
-      set["deliveredAt"] = new Date();
-      // Cash on delivery is settled by the courier handing the parcel
-      // over, so delivery *is* the payment event for those orders.
-      if (order.paymentMethod === "COD" && order.paymentStatus === "PENDING") {
-        set["paymentStatus"] = "PAID";
+      if (next === "SHIPPED") {
+        set["shipment"] = {
+          courier: input.courier ?? null,
+          trackingNumber: input.trackingNumber ?? null,
+          shippedAt: new Date(),
+        };
       }
+
+      if (next === "DELIVERED") {
+        set["deliveredAt"] = new Date();
+
+        // Cash on delivery is settled by the courier handing the parcel
+        // over, so delivery *is* the payment event — and in a marketplace
+        // it happens once per shop, not once per order.
+        if (
+          subOrder.paymentMethod === "COD" &&
+          subOrder.paymentStatus === "PENDING"
+        ) {
+          set["paymentStatus"] = "PAID";
+        }
+
+        // Delivered *and* paid for is the moment the vendor's money stops
+        // being contingent on anything.
+        const paid =
+          subOrder.paymentStatus === "PAID" || set["paymentStatus"] === "PAID";
+        if (paid && subOrder.payoutState === "PENDING") {
+          set["payoutState"] = "PAYABLE" satisfies PayoutState;
+        }
+      }
+
+      updated = await OrderService.transition(subOrder, set, {
+        status: next,
+        at: new Date(),
+        note,
+        by: actor._id,
+      });
     }
 
-    return OrderService.transition(order, set, {
-      status: next,
-      at: new Date(),
-      note,
-      by: actor._id,
-    });
+    await OrderService.syncParent(updated.order);
+
+    return updated;
   }
+
+  // ---------- Commands: payment ----------
 
   /**
    * Payment state moves independently of fulfilment (a card can settle
    * while the parcel is still being packed), so it has its own small
-   * machine rather than being folded into `updateStatus`.
+   * machine rather than being folded into the status transitions.
+   *
+   * Applied to the parent and mirrored onto every part that is still live:
+   * the customer pays once, for the whole basket.
    */
   async updatePaymentStatus(
     id: string,
     paymentStatus: PaymentStatus,
     note: string | null,
     actor: IUserDocument,
-  ): Promise<OrderDocument> {
+  ): Promise<OrderWithSubOrders> {
     const order = await OrderService.loadById(id);
 
     if (paymentStatus === order.paymentStatus) {
@@ -362,7 +564,9 @@ export class OrderService {
       );
     }
 
-    return updated;
+    await OrderService.propagatePayment(updated._id, paymentStatus);
+
+    return OrderService.withSubOrders(updated);
   }
 
   /**
@@ -371,9 +575,9 @@ export class OrderService {
    * Unlike `updatePaymentStatus` this is **idempotent rather than strict**,
    * because the caller is a redirect a customer can replay by refreshing
    * the tab, and eSewa's own status API is polled on top of that. An
-   * outcome the order has already recorded is a no-op, not a 409 — a
-   * paid order must not start returning errors because the customer
-   * pressed back.
+   * outcome the order has already recorded is a no-op, not a 409 — a paid
+   * order must not start returning errors because the customer pressed
+   * back.
    *
    * `by` is null throughout: nobody clicked this, a gateway said it.
    */
@@ -382,11 +586,13 @@ export class OrderService {
     outcome: Extract<PaymentStatus, "PAID" | "FAILED" | "REFUNDED">,
     note: string,
   ): Promise<OrderDocument> {
-    const order = await OrderService.loadById(orderId.toString());
+    const order = await OrderService.reload(orderId);
 
     if (order.paymentStatus === outcome) return order;
 
-    if (!OrderService.PAYMENT_TRANSITIONS[order.paymentStatus].includes(outcome)) {
+    if (
+      !OrderService.PAYMENT_TRANSITIONS[order.paymentStatus].includes(outcome)
+    ) {
       throw ApiError.conflict(
         `Cannot move payment from ${order.paymentStatus.toLowerCase()} to ${outcome.toLowerCase()}`,
       );
@@ -418,7 +624,14 @@ export class OrderService {
 
     // Lost the race to a concurrent callback for the same payment; that
     // caller applied the identical outcome, so re-read and report success.
-    return updated ?? (await OrderService.loadById(order._id.toString()));
+    if (!updated) {
+      return OrderService.reload(order._id);
+    }
+
+    await OrderService.propagatePayment(updated._id, outcome);
+    await OrderService.syncParent(updated._id);
+
+    return OrderService.reload(updated._id);
   }
 
   // ---------- Internals: reads ----------
@@ -429,12 +642,36 @@ export class OrderService {
     if (!Types.ObjectId.isValid(id)) {
       throw ApiError.notFound("Order not found");
     }
+    return OrderService.reload(new Types.ObjectId(id));
+  }
 
+  private static async reload(id: Types.ObjectId): Promise<OrderDocument> {
     const order = await Order.findById(id);
     if (!order) {
       throw ApiError.notFound("Order not found");
     }
     return order;
+  }
+
+  private static async loadSubOrder(id: string): Promise<SubOrderDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    const subOrder = await SubOrder.findById(id);
+    if (!subOrder) {
+      throw ApiError.notFound("Order not found");
+    }
+    return subOrder;
+  }
+
+  private static async withSubOrders(
+    order: OrderDocument,
+  ): Promise<OrderWithSubOrders> {
+    const subOrders = await SubOrder.find({ order: order._id }).sort({
+      subOrderNumber: 1,
+    });
+    return { order, subOrders };
   }
 
   /**
@@ -445,6 +682,36 @@ export class OrderService {
     if (order.user.equals(user._id)) return;
     if (OrderService.PRIVILEGED_ROLES.includes(user.role)) return;
     throw ApiError.notFound("Order not found");
+  }
+
+  /** The caller's shop, for the vendor-scoped queues. */
+  private static async vendorOf(
+    user: IUserDocument,
+  ): Promise<VendorDocument> {
+    const vendor = await Vendor.findOne({ owner: user._id, ...NOT_DELETED });
+    if (!vendor) {
+      throw ApiError.forbidden("You do not have a seller account");
+    }
+    return vendor;
+  }
+
+  /**
+   * Whether this actor may move this sub-order.
+   *
+   * A vendor may only touch their own; an admin may touch any. Note the
+   * vendor check is against the *shop*, not the product owner — a shop
+   * could later have staff accounts, and fulfilment is the shop's job.
+   */
+  private static async assertSubOrderManageable(
+    subOrder: SubOrderDocument,
+    user: IUserDocument,
+  ): Promise<void> {
+    if (OrderService.PRIVILEGED_ROLES.includes(user.role)) return;
+
+    const vendor = await OrderService.vendorOf(user);
+    if (!vendor._id.equals(subOrder.vendor)) {
+      throw ApiError.notFound("Order not found");
+    }
   }
 
   private static async page(
@@ -467,6 +734,26 @@ export class OrderService {
     };
   }
 
+  private static async pageSubOrders(
+    filter: QueryFilter<ISubOrder>,
+    query: Pick<ListSubOrdersQuery, "page" | "limit" | "sort">,
+  ): Promise<SubOrderPage> {
+    const { page, limit, sort } = query;
+
+    const [data, total] = await Promise.all([
+      SubOrder.find(filter)
+        .sort(OrderService.SORT_STAGES[sort])
+        .skip((page - 1) * limit)
+        .limit(limit),
+      SubOrder.countDocuments(filter),
+    ]);
+
+    return {
+      data,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
+  }
+
   private static buildFilter(query: ListOrdersQuery): QueryFilter<IOrder> {
     const { status, paymentStatus, paymentMethod, user, orderNumber } = query;
     const { from, to } = query;
@@ -477,21 +764,33 @@ export class OrderService {
     if (paymentStatus) filter.paymentStatus = paymentStatus;
     if (paymentMethod) filter.paymentMethod = paymentMethod;
     if (user) filter.user = new Types.ObjectId(user);
-
-    if (orderNumber) {
-      // Anchored and built from an escaped literal: the value reaches a
-      // `$regex`, so an unescaped `.*` would widen the filter beyond what
-      // the admin typed and `(((((a` would be a backtracking DoS.
-      filter.orderNumber = new RegExp(
-        `^${orderNumber.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
-        "i",
-      );
-    }
+    if (orderNumber) filter.orderNumber = prefixRegex(orderNumber);
 
     if (from || to) {
       filter.placedAt = {
         ...(from && { $gte: from }),
         ...(to && { $lte: to }),
+      };
+    }
+
+    return filter;
+  }
+
+  private static buildSubOrderFilter(
+    query: ListSubOrdersQuery,
+  ): QueryFilter<ISubOrder> {
+    const filter: QueryFilter<ISubOrder> = {};
+
+    if (query.status) filter.status = query.status;
+    if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
+    if (query.payoutState) filter.payoutState = query.payoutState;
+    if (query.vendor) filter.vendor = new Types.ObjectId(query.vendor);
+    if (query.orderNumber) filter.orderNumber = prefixRegex(query.orderNumber);
+
+    if (query.from || query.to) {
+      filter.placedAt = {
+        ...(query.from && { $gte: query.from }),
+        ...(query.to && { $lte: query.to }),
       };
     }
 
@@ -513,6 +812,19 @@ export class OrderService {
       );
     }
 
+    // A shop suspended (or still awaiting approval) since the item was
+    // added cannot be checked out from: nobody would be able to fulfil it,
+    // and the money would be owed to an account we have stopped paying.
+    const closed = items.filter((item) => !item.vendorActive);
+    if (closed.length > 0) {
+      const shops = [
+        ...new Set(closed.map((item) => item.vendorName ?? "Unknown shop")),
+      ].join(", ");
+      throw ApiError.conflict(
+        `${shops} ${closed.length === 1 ? "is" : "are"} not accepting orders right now. Remove those items and try again.`,
+      );
+    }
+
     const short = items.filter((item) => !item.inStock);
     if (short.length > 0) {
       const detail = short
@@ -523,6 +835,55 @@ export class OrderService {
         .join(", ");
       throw ApiError.conflict(`Not enough stock for ${detail}`);
     }
+  }
+
+  /**
+   * Groups the cart by shop and prices each group.
+   *
+   * The vendors are re-read here rather than trusted from the cart's join,
+   * because this is where the commission rate is captured — and a rate is
+   * the one figure that must come from the record, not from a projection
+   * assembled for a shopping-cart screen.
+   */
+  private static async split(items: CartItemView[]): Promise<VendorSlice[]> {
+    const grouped = new Map<string, CartItemView[]>();
+
+    for (const item of items) {
+      // `assertPurchasable` has already rejected lines with no live shop.
+      const key = (item.vendorId ?? "").toString();
+      const bucket = grouped.get(key);
+      if (bucket) {
+        bucket.push(item);
+      } else {
+        grouped.set(key, [item]);
+      }
+    }
+
+    const ids = [...grouped.keys()].map((id) => new Types.ObjectId(id));
+    const vendors = await Vendor.find({
+      _id: { $in: ids },
+      status: SELLABLE_STATUS,
+      ...NOT_DELETED,
+    });
+
+    if (vendors.length !== grouped.size) {
+      throw ApiError.conflict(
+        "One of the shops in your cart stopped accepting orders. Reload your cart and try again.",
+      );
+    }
+
+    return vendors.map((vendor) => {
+      const lines = grouped.get(vendor._id.toString()) ?? [];
+      const orderItems = lines.map(OrderService.toOrderItem);
+      const pricing = OrderService.price(orderItems);
+
+      return {
+        vendor,
+        items: orderItems,
+        pricing,
+        earnings: OrderService.splitEarnings(pricing, vendor.commissionRate),
+      };
+    });
   }
 
   /** Cart line → frozen order line. */
@@ -540,17 +901,16 @@ export class OrderService {
     };
   }
 
-  /** Charges are derived here and nowhere else. */
+  /**
+   * One shop's charges. Derived here and nowhere else, from the same
+   * policy the cart preview quoted.
+   */
   private static price(items: IOrderItem[]): IOrderPricing {
     const subtotal = money(
       items.reduce((total, item) => total + item.lineTotal, 0),
     );
 
-    const shippingFee =
-      subtotal >= PRICING_POLICY.freeShippingThreshold
-        ? 0
-        : PRICING_POLICY.shippingFee;
-
+    const shippingFee = shippingFeeFor(subtotal);
     const taxTotal = money(subtotal * PRICING_POLICY.taxRate);
     const discountTotal = 0;
 
@@ -560,6 +920,44 @@ export class OrderService {
       taxTotal,
       discountTotal,
       grandTotal: money(subtotal + shippingFee + taxTotal - discountTotal),
+    };
+  }
+
+  /**
+   * Splits one sub-order's money between the platform and the vendor.
+   *
+   * Commission is charged on the **goods subtotal only**. Delivery is
+   * passed through in full because the vendor pays the courier — taking a
+   * percentage of it would charge them a cut of their own costs — and tax
+   * is never theirs to begin with, so it is in neither figure.
+   */
+  private static splitEarnings(
+    pricing: IOrderPricing,
+    vendorRate: number | null,
+  ): ISubOrderEarnings {
+    const commissionRate = commissionRateFor(vendorRate);
+    const commissionAmount = money(pricing.subtotal * commissionRate);
+
+    return {
+      commissionRate,
+      commissionAmount,
+      vendorEarning: money(
+        pricing.subtotal - commissionAmount + pricing.shippingFee,
+      ),
+    };
+  }
+
+  /** The parent order's totals: every shop's charges added up. */
+  private static combine(slices: VendorSlice[]): IOrderPricing {
+    const sum = (pick: (pricing: IOrderPricing) => number): number =>
+      money(slices.reduce((total, slice) => total + pick(slice.pricing), 0));
+
+    return {
+      subtotal: sum((pricing) => pricing.subtotal),
+      shippingFee: sum((pricing) => pricing.shippingFee),
+      taxTotal: sum((pricing) => pricing.taxTotal),
+      discountTotal: sum((pricing) => pricing.discountTotal),
+      grandTotal: sum((pricing) => pricing.grandTotal),
     };
   }
 
@@ -622,10 +1020,10 @@ export class OrderService {
   }
 
   /**
-   * Inserts the order, regenerating the reference if the random suffix
-   * collides with an existing one.
+   * Inserts the parent order, regenerating the reference if the random
+   * suffix collides with an existing one.
    */
-  private static async insert(
+  private static async insertOrder(
     data: Omit<
       IOrder,
       | "orderNumber"
@@ -655,6 +1053,51 @@ export class OrderService {
 
     // Unreachable: the loop either returns or rethrows on its last pass.
     throw ApiError.conflict("Could not allocate an order number");
+  }
+
+  /**
+   * One sub-order per shop, numbered `<orderNumber>-1`, `-2`, …
+   *
+   * Derived from the parent's reference rather than randomised: a customer
+   * on the phone reads one number, and support needs to see at a glance
+   * that `ORD-20260901-K3F9QZ-2` is the second parcel of that same order.
+   */
+  private static insertSubOrders(
+    order: OrderDocument,
+    slices: VendorSlice[],
+  ): Promise<SubOrderDocument[]> {
+    const now = new Date();
+
+    const documents = slices.map((slice, index) => ({
+      order: order._id,
+      orderNumber: order.orderNumber,
+      subOrderNumber: `${order.orderNumber}-${String(index + 1)}`,
+      user: order.user,
+      vendor: slice.vendor._id,
+      items: slice.items,
+      pricing: slice.pricing,
+      earnings: slice.earnings,
+      status: "PENDING" as OrderStatus,
+      paymentStatus: "PENDING" as PaymentStatus,
+      paymentMethod: order.paymentMethod,
+      statusHistory: [
+        {
+          status: "PENDING" as OrderStatus,
+          at: now,
+          note: "Order placed",
+          by: null,
+        },
+      ],
+      shipment: { courier: null, trackingNumber: null, shippedAt: null },
+      payoutState: "PENDING" as PayoutState,
+      payout: null,
+      placedAt: now,
+      deliveredAt: null,
+      cancelledAt: null,
+      cancelReason: null,
+    }));
+
+    return SubOrder.insertMany(documents);
   }
 
   /**
@@ -702,12 +1145,12 @@ export class OrderService {
 
   /** Guarded status write — the caller has already validated the move. */
   private static async transition(
-    order: OrderDocument,
+    subOrder: SubOrderDocument,
     set: Record<string, unknown>,
     event: IOrderStatusEvent,
-  ): Promise<OrderDocument> {
-    const updated = await Order.findOneAndUpdate(
-      { _id: order._id, status: order.status },
+  ): Promise<SubOrderDocument> {
+    const updated = await SubOrder.findOneAndUpdate(
+      { _id: subOrder._id, status: subOrder.status },
       { $set: set, $push: { statusHistory: event } },
       { returnDocument: "after", runValidators: true },
     );
@@ -722,17 +1165,17 @@ export class OrderService {
   }
 
   /**
-   * Cancels and restocks, in that order.
+   * Cancels one shop's part and restocks it, in that order.
    *
    * The status write goes first *because* it is guarded: only the caller
-   * that actually moved the order out of its previous status restocks it,
-   * so a double-click cannot return the units twice.
+   * that actually moved the sub-order out of its previous status restocks
+   * it, so a double-click cannot return the units twice.
    */
   private static async applyCancellation(
-    order: OrderDocument,
+    subOrder: SubOrderDocument,
     reason: string | null,
     by: Types.ObjectId,
-  ): Promise<OrderDocument> {
+  ): Promise<SubOrderDocument> {
     const now = new Date();
 
     const set: Record<string, unknown> = {
@@ -741,12 +1184,22 @@ export class OrderService {
       cancelReason: reason,
     };
 
-    // Money already taken has to go back; an unpaid order just stops.
-    if (order.paymentStatus === "PAID") {
+    // Money already taken has to go back; an unpaid part just stops.
+    if (subOrder.paymentStatus === "PAID") {
       set["paymentStatus"] = "REFUNDED";
     }
 
-    const cancelled = await OrderService.transition(order, set, {
+    // Nothing is owed for goods that were never delivered. A part already
+    // paid out is left alone — clawing that back is the payout module's
+    // job, and silently rewriting a settled payment would hide it.
+    if (
+      subOrder.payoutState === "PENDING" ||
+      subOrder.payoutState === "PAYABLE"
+    ) {
+      set["payoutState"] = "REVERSED" satisfies PayoutState;
+    }
+
+    const cancelled = await OrderService.transition(subOrder, set, {
       status: "CANCELLED",
       at: now,
       note: reason,
@@ -756,6 +1209,141 @@ export class OrderService {
     await OrderService.releaseStock(cancelled.items);
 
     return cancelled;
+  }
+
+  /**
+   * Mirrors a payment outcome onto every part that is still live.
+   *
+   * Three separate writes, because they are scoped to three different sets
+   * of sub-orders and folding them into one would silently skip parts:
+   * the payment itself applies to *every* live part (including ones a shop
+   * has already started packing), the confirmation only to parts still
+   * waiting on it, and the payout release only to parts already delivered.
+   */
+  private static async propagatePayment(
+    orderId: Types.ObjectId,
+    paymentStatus: PaymentStatus,
+  ): Promise<void> {
+    try {
+      await SubOrder.updateMany(
+        { order: orderId, status: { $ne: "CANCELLED" } },
+        { $set: { paymentStatus } },
+      );
+
+      if (paymentStatus !== "PAID") return;
+
+      // A prepaid order is confirmed the moment it settles, for every shop
+      // that has not moved past waiting.
+      await SubOrder.updateMany(
+        { order: orderId, status: "PENDING" },
+        { $set: { status: "CONFIRMED" } },
+      );
+
+      // A part delivered before the money landed has been sitting on
+      // `PENDING` with nothing left to wait for. Payment is the last
+      // condition, so it becomes payable now rather than never.
+      await SubOrder.updateMany(
+        { order: orderId, status: "DELIVERED", payoutState: "PENDING" },
+        { $set: { payoutState: "PAYABLE" satisfies PayoutState } },
+      );
+    } catch (error) {
+      console.error(
+        `Failed to propagate payment ${paymentStatus} to the parts of order ${orderId.toString()}`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * An order is only as far along as its least-advanced live part.
+   *
+   * Half shipped and half still being packed is a *processing* order — the
+   * customer has not received everything, so claiming otherwise would be a
+   * lie on their order history. All parts cancelled means the order is.
+   */
+  private static deriveStatus(statuses: OrderStatus[]): OrderStatus {
+    const live = statuses.filter((status) => status !== "CANCELLED");
+    if (live.length === 0) return "CANCELLED";
+
+    return live.reduce((lowest, status) =>
+      OrderService.STATUS_RANK[status] < OrderService.STATUS_RANK[lowest]
+        ? status
+        : lowest,
+    );
+  }
+
+  /**
+   * Recomputes the parent's derived fields from its parts.
+   *
+   * Called after every sub-order transition. It writes `status` and (for
+   * cash on delivery, which settles per parcel) `paymentStatus` directly
+   * rather than going through the transition guards — those guard
+   * *commands*, and this is the shadow of decisions already made and
+   * validated on the sub-orders.
+   *
+   * Best-effort: the sub-order transition is the source of truth and has
+   * already committed, so a failure here leaves a stale summary rather
+   * than losing the fulfilment step that caused it.
+   */
+  private static async syncParent(orderId: Types.ObjectId): Promise<void> {
+    try {
+      const parts = await SubOrder.find({ order: orderId }).select(
+        "status paymentStatus deliveredAt",
+      );
+
+      if (parts.length === 0) return;
+
+      const status = OrderService.deriveStatus(
+        parts.map((part) => part.status),
+      );
+
+      const set: Record<string, unknown> = { status };
+      const now = new Date();
+
+      if (status === "DELIVERED") {
+        set["deliveredAt"] = now;
+      }
+      if (status === "CANCELLED") {
+        set["cancelledAt"] = now;
+      }
+
+      const live = parts.filter((part) => part.status !== "CANCELLED");
+
+      const order = await Order.findById(orderId).select(
+        "paymentMethod paymentStatus",
+      );
+
+      // Cash on delivery is collected once per parcel, so the order is only
+      // paid once every live part has been. Prepaid orders are settled by
+      // the gateway on the parent and mirrored downwards, never derived.
+      if (
+        order?.paymentMethod === "COD" &&
+        live.length > 0 &&
+        live.every((part) => part.paymentStatus === "PAID")
+      ) {
+        set["paymentStatus"] = "PAID";
+      }
+
+      // Every shop cancelled means the whole order was, so money already
+      // taken is owed back in full. A *partial* cancellation deliberately
+      // leaves the parent `PAID`: the customer is still paying for the
+      // parcels that are on their way, and the refund for the rest is
+      // recorded on the sub-orders that were cancelled.
+      if (
+        status === "CANCELLED" &&
+        live.length === 0 &&
+        order?.paymentStatus === "PAID"
+      ) {
+        set["paymentStatus"] = "REFUNDED";
+      }
+
+      await Order.updateOne({ _id: orderId }, { $set: set });
+    } catch (error) {
+      console.error(
+        `Failed to recompute the summary of order ${orderId.toString()}`,
+        error,
+      );
+    }
   }
 }
 

@@ -68,7 +68,7 @@ export class PaymentService {
     user: IUserDocument,
   ): Promise<PaymentDocument[]> {
     // Reuses the order module's ownership rule rather than restating it.
-    const order = await orderService.getForUser(orderId, user);
+    const order = await orderService.getOrderForUser(orderId, user);
     return Payment.find({ order: order._id }).sort({ createdAt: -1 });
   }
 
@@ -87,7 +87,7 @@ export class PaymentService {
     orderId: string,
   ): Promise<EsewaCheckoutForm> {
     const config = esewaConfig();
-    const order = await orderService.getForUser(orderId, user);
+    const order = await orderService.getOrderForUser(orderId, user);
 
     if (order.paymentMethod !== "ESEWA") {
       throw ApiError.badRequest("This order is not set to be paid with eSewa");

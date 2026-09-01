@@ -9,6 +9,7 @@ import {
 export type CreateProductData = Pick<
   IProduct,
   | "owner"
+  | "vendor"
   | "categoryId"
   | "name"
   | "description"
@@ -20,9 +21,14 @@ export type CreateProductData = Pick<
   | "isFeatured"
 >;
 
-/** Ownership is never transferable through an update. */
+/**
+ * Ownership is never transferable through an update — neither to another
+ * user nor, more importantly, to another shop: moving a listing between
+ * vendors would re-point every past order line's commission at a business
+ * that never made the sale.
+ */
 export type UpdateProductData = {
-  [K in keyof Omit<CreateProductData, "owner">]?: CreateProductData[K];
+  [K in keyof Omit<CreateProductData, "owner" | "vendor">]?: CreateProductData[K];
 };
 
 export type SortStage = Record<string, 1 | -1>;
@@ -47,10 +53,15 @@ export class ProductRepository {
 
   /** Populated — for responses. */
   findById(id: string) {
-    return this.model
-      .findOne({ _id: id, ...ProductRepository.NOT_DELETED })
-      .populate("categoryId", "name slug")
-      .populate("owner", "firstName lastName avatarUrl");
+    return (
+      this.model
+        .findOne({ _id: id, ...ProductRepository.NOT_DELETED })
+        .populate("categoryId", "name slug")
+        // Only the storefront-safe fields: a product page must not leak the
+        // shop's payout account or negotiated commission rate.
+        .populate("vendor", "name slug logoUrl ratingAverage ratingCount")
+        .populate("owner", "firstName lastName avatarUrl")
+    );
   }
 
   /** Unpopulated hydrated doc — for ownership checks and mutation. */
@@ -76,6 +87,11 @@ export class ProductRepository {
       { createdAt: -1 },
       page,
     );
+  }
+
+  /** A shop's own listings — the storefront, and the vendor's catalogue. */
+  findByVendor(vendorId: Types.ObjectId, sort: SortStage, page: PageRequest) {
+    return this.findAll({ vendor: vendorId }, sort, page);
   }
 
   updateById(id: string, data: UpdateProductData) {

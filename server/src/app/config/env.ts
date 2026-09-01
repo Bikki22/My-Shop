@@ -33,6 +33,28 @@ const envSchema = z.object({
   CORS_ORIGINS: z.string().optional().default("http://localhost:5173"),
 
   /**
+   * Marketplace economics. These were literals inside the checkout; they
+   * live here so the sandbox and production can differ without a code
+   * change, and so `config/platform.ts` has one place to read them from.
+   *
+   * `PLATFORM_COMMISSION_RATE` is the cut the platform keeps on every sale
+   * a vendor has not negotiated a rate for, as a fraction (0.1 = 10%).
+   */
+  PLATFORM_COMMISSION_RATE: z.coerce
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .default(0.1),
+
+  /** Charged per vendor sub-order, waived above the threshold. */
+  SHIPPING_FLAT_FEE: z.coerce.number().min(0).optional().default(49),
+  FREE_SHIPPING_THRESHOLD: z.coerce.number().min(0).optional().default(999),
+
+  /** Fraction of the subtotal, e.g. 0.13 for 13%. */
+  TAX_RATE: z.coerce.number().min(0).max(1).optional().default(0),
+
+  /**
    * Where the browser is sent back to after a payment. eSewa redirects the
    * *browser*, not an API client, so both of these have to be absolute
    * URLs reachable from the customer's machine — not container hostnames.
