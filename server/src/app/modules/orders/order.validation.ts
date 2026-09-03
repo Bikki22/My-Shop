@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAGINATION } from "../../constants.js";
 import {
   ORDER_STATUSES,
   PAYMENT_METHODS,
@@ -28,8 +29,19 @@ const shortText = (label: string, max = 100) =>
     .max(max, `${label} cannot exceed ${String(max)} characters`);
 
 export const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(PAGINATION.DEFAULT_PAGE),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PAGINATION.MAX_LIMIT)
+    .optional()
+    .default(PAGINATION.DEFAULT_LIMIT),
 });
 
 export const shippingAddressSchema = z

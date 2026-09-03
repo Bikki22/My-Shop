@@ -5,6 +5,7 @@ import {
   validateParams,
   validateQuery,
 } from "../../middlewares/validate.middleware.js";
+import { uploadImages } from "../../middlewares/upload.middleware.js";
 import { productController } from "./product.controller.js";
 import {
   categoryIdParamSchema,
@@ -70,6 +71,19 @@ router.delete(
   requireAuth,
   validateParams(productIdParamSchema),
   productController.remove,
+);
+
+/**
+ * Multipart, not JSON — so no `validateBody` here. The upload middleware
+ * enforces the file count, size and type, and the controller checks that
+ * at least one file actually arrived.
+ */
+router.post(
+  "/:id/images",
+  requireAuth,
+  validateParams(productIdParamSchema),
+  uploadImages,
+  productController.addImages,
 );
 
 router.patch(

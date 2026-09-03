@@ -74,6 +74,66 @@ const envSchema = z.object({
   ESEWA_ENV: z.enum(["test", "production"]).optional().default("test"),
   ESEWA_PRODUCT_CODE: z.string().trim().min(1).optional(),
   ESEWA_SECRET_KEY: z.string().min(1).optional(),
+
+  /**
+   * Cloudinary. Optional as a group, the same deal as eSewa: while any of
+   * the three is unset the upload routes answer 503 and the rest of the
+   * API runs normally — products can still be created with image URLs
+   * hosted elsewhere.
+   *
+   * `CLOUDINARY_API_SECRET` signs upload and destroy calls, so it must
+   * never be handed to the browser.
+   */
+  CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
+  CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+
+  /**
+   * Resend. Optional: while it is unset `sendEmail` logs what it would
+   * have sent and reports failure to its caller. No request path treats a
+   * missing email as fatal — an order that was placed successfully must
+   * not fail because its receipt bounced.
+   */
+  RESEND_API_KEY: z.string().min(1).optional(),
+
+  /**
+   * The From header on every outgoing message: `Name <address>` or a bare
+   * address. Resend rejects domains that aren't verified on the account,
+   * so the default is their shared sandbox sender — deliverable only to
+   * the address that owns the Resend account.
+   */
+  EMAIL_FROM: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .default("My Shop <onboarding@resend.dev>"),
+
+  /**
+   * Signing secrets for the app's own tokens (`utils/jwt.ts`).
+   *
+   * Session auth belongs to Clerk. These are for the narrower jobs a
+   * session cannot do: a one-shot link mailed to someone who is not
+   * signed in, a short-lived grant handed to another service. Optional as
+   * a group — `utils/jwt.ts` refuses to sign while they are unset rather
+   * than falling back to a baked-in secret that would be identical in
+   * every deployment.
+   *
+   * The floor is 32 characters because a short secret is brute-forceable
+   * offline: a leaked token is all an attacker needs to start guessing.
+   */
+  ACCESS_TOKEN_SECRET: z
+    .string()
+    .min(32, "ACCESS_TOKEN_SECRET must be at least 32 characters")
+    .optional(),
+  REFRESH_TOKEN_SECRET: z
+    .string()
+    .min(32, "REFRESH_TOKEN_SECRET must be at least 32 characters")
+    .optional(),
+
+  /** Anything `jsonwebtoken` accepts for `expiresIn`: "15m", "7d", "3600". */
+  ACCESS_TOKEN_EXPIRES_IN: z.string().trim().min(1).optional().default("15m"),
+  REFRESH_TOKEN_EXPIRES_IN: z.string().trim().min(1).optional().default("7d"),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAGINATION, SEARCH_MAX_LENGTH } from "../../constants.js";
 import { PAYOUT_METHODS, VENDOR_STATUSES } from "./vendor.model.js";
 
 const objectIdSchema = z
@@ -133,8 +134,19 @@ export const vendorSlugParamSchema = z.object({
 });
 
 const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(PAGINATION.DEFAULT_PAGE),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PAGINATION.MAX_LIMIT)
+    .optional()
+    .default(PAGINATION.DEFAULT_LIMIT),
 });
 
 const vendorSortSchema = z
@@ -144,7 +156,7 @@ const vendorSortSchema = z
 
 /** The public shop directory. Status is not a filter here — see the service. */
 export const listVendorsQuerySchema = paginationQuerySchema.extend({
-  search: z.string().trim().min(1).max(100).optional(),
+  search: z.string().trim().min(1).max(SEARCH_MAX_LENGTH).optional(),
   sort: vendorSortSchema,
 });
 

@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  PAGINATION,
+  PRODUCT_IMAGES,
+  SEARCH_MAX_LENGTH,
+} from "../../constants.js";
 
 const objectIdSchema = z
   .string()
@@ -8,8 +13,19 @@ const priceSchema = z.coerce.number().min(0, "Price cannot be negative");
 const stockSchema = z.coerce.number().int().min(0, "Stock cannot be negative");
 
 export const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(PAGINATION.DEFAULT_PAGE),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PAGINATION.MAX_LIMIT)
+    .optional()
+    .default(PAGINATION.DEFAULT_LIMIT),
 });
 
 export const createProductBodySchema = z.object({
@@ -26,7 +42,14 @@ export const createProductBodySchema = z.object({
   brand: z.string().trim(),
   images: z
     .array(z.url("Each image must be a valid URL"))
-    .min(1, "At least one product image is required"),
+    .min(
+      PRODUCT_IMAGES.MIN_PER_PRODUCT,
+      "At least one product image is required",
+    )
+    .max(
+      PRODUCT_IMAGES.MAX_PER_PRODUCT,
+      `A product can have at most ${String(PRODUCT_IMAGES.MAX_PER_PRODUCT)} images`,
+    ),
   price: priceSchema,
   stock: stockSchema.default(0),
   tags: z.array(z.string().trim()).optional().default([]),
@@ -48,7 +71,7 @@ export const categoryIdParamSchema = z.object({
 });
 
 export const getAllProductsQuerySchema = paginationQuerySchema.extend({
-  search: z.string().trim().optional(),
+  search: z.string().trim().max(SEARCH_MAX_LENGTH).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   tags: z.string().trim().optional(), // comma-separated, split in the service

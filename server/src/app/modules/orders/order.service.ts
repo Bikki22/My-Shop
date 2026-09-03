@@ -7,6 +7,10 @@ import {
 } from "../../config/platform.js";
 import { ApiError } from "../../utils/ApiError.js";
 import {
+  sendOrderConfirmationEmail,
+  sendPaymentReceivedEmail,
+} from "../../utils/email.js";
+import {
   isDuplicateKeyError,
   money,
   NOT_DELETED,
@@ -15,7 +19,11 @@ import {
 import { Cart } from "../cart/cart.model.js";
 import { cartService, type CartItemView } from "../cart/cart.service.js";
 import { Product } from "../products/product.model.js";
-import type { IUserDocument, UserRole } from "../users/user.model.js";
+import {
+  User,
+  type IUserDocument,
+  type UserRole,
+} from "../users/user.model.js";
 import {
   SELLABLE_STATUS,
   Vendor,
@@ -344,6 +352,22 @@ export class OrderService {
 
     await OrderService.clearOrderedLines(user, allItems);
 
+    // Fire-and-forget, and deliberately the last thing that happens: the
+    // order is already durable by this point, so a mail failure cannot
+    // roll anything back. `sendOrderConfirmationEmail` never throws and
+    // never awaits — see `utils/email.ts`.
+    sendOrderConfirmationEmail({
+      to: user.email,
+      customerName: user.firstName,
+      orderNumber: order.orderNumber,
+      total: order.pricing.grandTotal,
+      items: allItems.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    });
+
     return { order, subOrders };
   }
 
@@ -631,7 +655,41 @@ export class OrderService {
     await OrderService.propagatePayment(updated._id, outcome);
     await OrderService.syncParent(updated._id);
 
+    // Safe to send exactly once despite this method being replayable: the
+    // `paymentStatus === outcome` guard above returns early on every
+    // repeat, and the conditional update means only the caller that won
+    // the race gets here.
+    if (outcome === "PAID") {
+      await OrderService.notifyPaymentReceived(updated);
+    }
+
     return OrderService.reload(updated._id);
+  }
+
+  /**
+   * Receipt for a captured payment. Separate from the transition above so
+   * a lookup failure cannot leave a paid order half-updated: this runs
+   * after the write is committed, and swallows its own errors.
+   */
+  private static async notifyPaymentReceived(
+    order: OrderDocument,
+  ): Promise<void> {
+    try {
+      const customer = await User.findById(order.user).select("email").lean();
+      if (!customer?.email) return;
+
+      sendPaymentReceivedEmail({
+        to: customer.email,
+        orderNumber: order.orderNumber,
+        amount: order.pricing.grandTotal,
+        method: order.paymentMethod,
+      });
+    } catch (error) {
+      console.error(
+        `Failed to send payment receipt for order ${order.orderNumber}`,
+        error,
+      );
+    }
   }
 
   // ---------- Internals: reads ----------

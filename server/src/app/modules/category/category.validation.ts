@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAGINATION, SEARCH_MAX_LENGTH } from "../../constants.js";
 
 const objectIdSchema = z
   .string()
@@ -25,8 +26,19 @@ const slugSchema = z
   );
 
 export const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(PAGINATION.DEFAULT_PAGE),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PAGINATION.MAX_LIMIT)
+    .optional()
+    .default(PAGINATION.DEFAULT_LIMIT),
 });
 
 /**
@@ -76,7 +88,7 @@ export const categorySlugParamSchema = z.object({
  * category; pass `?isActive=false` to review the hidden ones.
  */
 export const listCategoriesQuerySchema = paginationQuerySchema.extend({
-  search: z.string().trim().min(1).max(100).optional(),
+  search: z.string().trim().min(1).max(SEARCH_MAX_LENGTH).optional(),
   isActive: booleanQuerySchema.optional().default(true),
   owner: objectIdSchema.optional(),
   sort: z

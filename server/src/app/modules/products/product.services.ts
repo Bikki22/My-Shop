@@ -1,5 +1,11 @@
 import mongoose, { Types } from "mongoose";
+import { CLOUDINARY_FOLDERS, PRODUCT_IMAGES } from "../../constants.js";
 import { ApiError } from "../../utils/ApiError.js";
+import {
+  destroyImageByUrl,
+  destroyImages,
+  uploadImages,
+} from "../../utils/cloudinary.js";
 import type { IUserDocument, UserRole } from "../users/user.model.js";
 import { vendorService, VendorService } from "../vendors/vendor.service.js";
 import type { IProduct, ProductDocument } from "./product.model.js";
@@ -132,6 +138,39 @@ export class ProductService {
     await VendorService.adjustProductCount(product.vendor, -1);
   }
 
+  /**
+   * Uploads new photos and appends them to the listing.
+   *
+   * The order matters: Cloudinary first, then the document. A save that
+   * fails after the upload leaves orphaned assets, which the cleanup below
+   * handles; doing it the other way round would leave the product pointing
+   * at URLs that were never successfully stored — a broken image on the
+   * storefront, which is the worse of the two failures.
+   */
+  async addImages(id: string, files: readonly Buffer[], user: IUserDocument) {
+    const product = await this.loadManageable(id, user);
+    await ProductService.assertMaySell(user);
+
+    const remaining = PRODUCT_IMAGES.MAX_PER_PRODUCT - product.images.length;
+    if (files.length > remaining) {
+      throw ApiError.badRequest(
+        remaining <= 0
+          ? `This product already has the maximum of ${String(PRODUCT_IMAGES.MAX_PER_PRODUCT)} images. Remove one first.`
+          : `You can add at most ${String(remaining)} more image(s) to this product.`,
+      );
+    }
+
+    const uploaded = await uploadImages(files, CLOUDINARY_FOLDERS.PRODUCTS);
+
+    try {
+      product.images = [...product.images, ...uploaded.map((img) => img.url)];
+      return await this.repository.save(product);
+    } catch (error) {
+      await destroyImages(uploaded.map((img) => img.publicId));
+      throw error;
+    }
+  }
+
   async removeSubImage(id: string, imageUrl: string, user: IUserDocument) {
     const product = await this.loadManageable(id, user);
     await ProductService.assertMaySell(user);
@@ -139,12 +178,21 @@ export class ProductService {
     if (!product.images.includes(imageUrl)) {
       throw ApiError.notFound("Image not found on this product");
     }
-    if (product.images.length <= 1) {
+    if (product.images.length <= PRODUCT_IMAGES.MIN_PER_PRODUCT) {
       throw ApiError.badRequest("Product must have at least one image");
     }
 
     product.images = product.images.filter((image) => image !== imageUrl);
-    return this.repository.save(product);
+    const saved = await this.repository.save(product);
+
+    // Only after the document no longer references it — a destroy that
+    // ran first and a save that then failed would leave the product
+    // pointing at an asset that is already gone. `destroyImageByUrl` is
+    // a no-op for images hosted somewhere other than our Cloudinary
+    // account, and never throws.
+    void destroyImageByUrl(imageUrl);
+
+    return saved;
   }
 
   // ---------- Internals ----------

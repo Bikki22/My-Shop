@@ -1,4 +1,6 @@
 import type { Request } from "express";
+import { UPLOADS } from "../../constants.js";
+import { filesFrom } from "../../middlewares/upload.middleware.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import type { IUserDocument } from "../users/user.model.js";
@@ -79,6 +81,25 @@ export class ProductController {
   remove = asyncHandler<{ id: string }>(async (req, res) => {
     await this.service.remove(req.params.id, currentUser(req));
     return res.status(200).json({ success: true, message: "Product deleted" });
+  });
+
+  addImages = asyncHandler<{ id: string }>(async (req, res) => {
+    const files = filesFrom(req);
+
+    // multer accepts a multipart body with no files at all, so this is the
+    // one upload check the middleware cannot make for us.
+    if (files.length === 0) {
+      throw ApiError.badRequest(
+        `No files received. Send them as multipart/form-data under "${UPLOADS.IMAGE_FIELD}".`,
+      );
+    }
+
+    const product = await this.service.addImages(
+      req.params.id,
+      files.map((file) => file.buffer),
+      currentUser(req),
+    );
+    return res.status(201).json({ success: true, data: product });
   });
 
   removeSubImage = asyncHandler<{ id: string }>(async (req, res) => {
