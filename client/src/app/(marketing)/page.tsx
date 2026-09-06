@@ -12,7 +12,12 @@ export default function HomePage() {
       <p className="max-w-prose text-muted-foreground">
         {siteConfig.description}
       </p>
-      <Button render={<Link href={routes.account} />}>Go to your account</Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button render={<Link href={routes.products} />}>Browse products</Button>
+        <Button render={<Link href={routes.account} />} variant="outline">
+          Go to your account
+        </Button>
+      </div>
     </section>
   );
 }

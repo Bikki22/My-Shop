@@ -37,7 +37,6 @@ export interface IUser {
   firstName: string;
   lastName?: string;
   email: string;
-  phone?: string | null;
   avatarUrl?: string | null;
   role: UserRole;
   status: UserStatus;
@@ -82,12 +81,6 @@ const userSchema = new mongoose.Schema<IUser>(
       lowercase: true,
       trim: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address"],
-    },
-
-    phone: {
-      type: String,
-      trim: true,
-      default: null,
     },
 
     avatarUrl: {

@@ -14,6 +14,10 @@ const statusSchema = z.enum(USER_STATUSES);
  * absent — those are admin- or Clerk-owned and must never be settable
  * from this route. `.strict()` turns an attempt to send them into a 400
  * instead of a silently ignored field.
+ *
+ * Phone is absent too: a contact number belongs to the place something is
+ * being delivered, not to the identity, so it lives on the order's
+ * `shippingAddress` where it is required and per-order editable.
  */
 export const updateMeBodySchema = z
   .object({
@@ -27,12 +31,6 @@ export const updateMeBodySchema = z
       .string()
       .trim()
       .max(50, "Last name cannot exceed 50 characters")
-      .optional(),
-    phone: z
-      .string()
-      .trim()
-      .regex(/^\+?[0-9\s-]{7,20}$/, "Invalid phone number")
-      .nullable()
       .optional(),
     avatarUrl: z.url("Avatar must be a valid URL").nullable().optional(),
   })

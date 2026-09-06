@@ -16,7 +16,6 @@ export interface CurrentUser {
   firstName: string;
   lastName?: string;
   email: string;
-  phone?: string | null;
   avatarUrl?: string | null;
   role: UserRole;
   status: UserStatus;
@@ -28,6 +27,5 @@ export interface CurrentUser {
 export interface UpdateProfileInput {
   firstName?: string;
   lastName?: string;
-  phone?: string | null;
   avatarUrl?: string | null;
 }

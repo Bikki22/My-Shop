@@ -1,6 +1,6 @@
 "use client";
 
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,8 +9,13 @@ import { ADMIN_ROLES } from "../permissions";
 import { RoleGate } from "./role-gate";
 
 /**
- * The header's auth area: sign in / sign up for guests, Clerk's account
- * widget for members, plus an admin link for privileged roles.
+ * The header's auth area: links to our own sign-in/sign-up screens for
+ * guests, Clerk's account widget for members, plus an admin link for
+ * privileged roles.
+ *
+ * These are links rather than Clerk's `<SignInButton>`/`<SignUpButton>`
+ * because those open the prebuilt modal, which renders whatever identifiers
+ * the Clerk instance has enabled — phone number included.
  *
  * `isLoaded` is checked before branching so the guest buttons don't flash on
  * screen for a moment before Clerk resolves the session.
@@ -28,14 +33,16 @@ export function UserMenu() {
   if (!isSignedIn) {
     return (
       <div className="flex items-center gap-2">
-        <SignInButton>
-          <Button variant="ghost" size="sm">
-            Sign in
-          </Button>
-        </SignInButton>
-        <SignUpButton>
-          <Button size="sm">Sign up</Button>
-        </SignUpButton>
+        <Button
+          render={<Link href={routes.signIn} />}
+          variant="ghost"
+          size="sm"
+        >
+          Sign in
+        </Button>
+        <Button render={<Link href={routes.signUp} />} size="sm">
+          Sign up
+        </Button>
       </div>
     );
   }

@@ -25,6 +25,14 @@ export interface RequestOptions extends Omit<RequestInit, "body" | "method"> {
   searchParams?: Record<string, string | number | boolean | undefined | null>;
   /** Omit to send the request unauthenticated. */
   getToken?: TokenProvider;
+  /**
+   * Whether to unwrap the `{ success, data }` envelope. Defaults to `true`.
+   *
+   * The paginated list endpoints are the exception: they spread their page
+   * envelope onto the body (`{ success, docs, totalDocs, ... }`), so there is
+   * no `data` to unwrap and they pass `false`.
+   */
+  unwrap?: boolean;
 }
 
 const API_PREFIX = "/api/v1";
@@ -61,7 +69,14 @@ const isBodyInit = (body: unknown): body is BodyInit =>
  */
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, searchParams, getToken, ...init }: RequestOptions = {},
+  {
+    method = "GET",
+    body,
+    searchParams,
+    getToken,
+    unwrap = true,
+    ...init
+  }: RequestOptions = {},
 ): Promise<T> {
   const headers = new Headers(init.headers);
 
@@ -99,6 +114,6 @@ export async function apiRequest<T>(
     return undefined as T;
   }
 
-  const payload = (await response.json()) as ApiSuccess<T>;
-  return payload.data;
+  const payload = (await response.json()) as ApiSuccess<T> | T;
+  return unwrap ? (payload as ApiSuccess<T>).data : (payload as T);
 }
