@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { AddToCart } from "@/features/cart/components/add-to-cart";
 import { ProductCard } from "@/features/products/components/product-card";
 import { ProductGallery } from "@/features/products/components/product-gallery";
 import { ProductImage } from "@/features/products/components/product-image";
@@ -123,6 +124,11 @@ export default async function ProductPage({
               {stockLabel(product.stock)}
             </Badge>
           </div>
+
+          {/* The buy controls sit directly under the price, above the
+              description: a shopper who has decided should not have to scroll
+              past the copy to act. */}
+          <AddToCart productId={product._id} stock={product.stock} />
 
           <Separator />
 

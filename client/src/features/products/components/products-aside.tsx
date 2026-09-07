@@ -6,7 +6,7 @@ import {
   SlidersHorizontalIcon,
 } from "lucide-react";
 import { useState } from "react";
-import type { Category } from "@/features/categories/types";
+import { useCategoriesQuery } from "@/features/categories/hooks/use-categories-query";
 import { cn } from "@/lib/utils";
 import { useProductFilters } from "../hooks/use-product-filters";
 import { countActiveFilters } from "../lib/product-filters";
@@ -22,7 +22,8 @@ import { ProductFiltersSheet } from "./product-filters-sheet";
  * cost the grid a column at every width, and a separate filters *page*
  * would make refining a search a round trip away from the results.
  */
-export function ProductsAside({ categories }: { categories: Category[] }) {
+export function ProductsAside() {
+  const categories = useCategoriesQuery();
   const [open, setOpen] = useState(false);
   const { filters, replaceAll, reset, isPending } = useProductFilters();
   const activeCount = countActiveFilters(filters);

@@ -1,7 +1,7 @@
 "use client";
 
 import { XIcon } from "lucide-react";
-import type { Category } from "@/features/categories/types";
+import { useCategoriesQuery } from "@/features/categories/hooks/use-categories-query";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "../lib/format";
 import { countActiveFilters } from "../lib/product-filters";
@@ -15,7 +15,8 @@ import type { ProductFilters } from "../types";
  * and undone, so a visitor never has to reopen a panel to find out why a
  * grid looks empty.
  */
-export function ActiveFilters({ categories }: { categories: Category[] }) {
+export function ActiveFilters() {
+  const categories = useCategoriesQuery();
   const { filters, apply, reset, isPending } = useProductFilters();
 
   if (countActiveFilters(filters) === 0) return null;

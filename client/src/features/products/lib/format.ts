@@ -1,34 +1,12 @@
 /**
  * Presentation helpers for a product.
  *
- * The marketplace settles in NPR (the payment module's amounts are in
- * rupees, and the server's receipt emails render `Rs. …`), so the currency
- * is fixed here rather than guessed from the visitor's locale — a price
- * relabelled as dollars because someone is browsing from abroad would be
- * a lie about what they are charged.
+ * The money, count and date formatters moved to `@/lib/format` once the
+ * cart and orders needed them too — a total is a total wherever it is
+ * rendered. They are re-exported here so this stays the one import a
+ * product component reaches for.
  */
-const priceFormatter = new Intl.NumberFormat("en-IN", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-
-export const formatPrice = (value: number): string =>
-  `Rs. ${priceFormatter.format(value)}`;
-
-const compactFormatter = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
-export const formatCount = (value: number): string =>
-  compactFormatter.format(value);
-
-export const formatDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+export { formatCount, formatDate, formatPrice } from "@/lib/format";
 
 /** Below this many units the card nudges the shopper. */
 export const LOW_STOCK_THRESHOLD = 5;

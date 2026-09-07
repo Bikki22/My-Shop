@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { UserMenu } from "@/features/auth/components/user-menu";
+import { CartLink } from "@/features/cart/components/cart-link";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
 
@@ -18,9 +19,22 @@ export function SiteHeader() {
             >
               Products
             </Link>
+            <Link
+              href={routes.orders}
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Orders
+            </Link>
           </nav>
         </div>
-        <UserMenu />
+
+        <div className="flex items-center gap-2">
+          {/* Reads the shared query cache, so it moves the moment any cart
+              write resolves — no Suspense boundary needed, because it renders
+              a bare icon until the count arrives rather than blocking. */}
+          <CartLink />
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

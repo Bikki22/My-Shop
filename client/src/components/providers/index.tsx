@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { routes } from "@/config/routes";
 import { CurrentUserProvider } from "@/features/auth/components/current-user-provider";
 import { getCurrentUser } from "@/features/auth/server/current-user";
+import { QueryProvider } from "@/lib/query/provider";
 import { ThemeProvider } from "./theme-provider";
 
 /**
@@ -31,7 +32,12 @@ export async function AppProviders({ children }: { children: ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <CurrentUserProvider user={user}>{children}</CurrentUserProvider>
+        {/* App-wide, above the routes: the header's cart badge and the cart
+            page have to share one cache, and a provider scoped to `/cart`
+            would give them two. */}
+        <QueryProvider>
+          <CurrentUserProvider user={user}>{children}</CurrentUserProvider>
+        </QueryProvider>
         <Toaster position="top-right" richColors />
       </ThemeProvider>
     </ClerkProvider>

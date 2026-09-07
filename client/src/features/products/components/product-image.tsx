@@ -4,7 +4,11 @@ import { isOptimizableImage } from "@/config/images";
 import { cn } from "@/lib/utils";
 
 interface ProductImageProps {
-  src: string | undefined;
+  /**
+   * Nullable as well as optional: a cart line and an order item both carry
+   * `image: string | null` straight from the API.
+   */
+  src: string | null | undefined;
   alt: string;
   /** Passed straight to `next/image`; required because every use is `fill`. */
   sizes: string;
