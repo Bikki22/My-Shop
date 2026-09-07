@@ -197,3 +197,79 @@ export const emptyOrderPage = (limit: number): OrderPage => ({
   data: [],
   pagination: { page: 1, limit, total: 0, pages: 0 },
 });
+
+/**
+ * What a shop is owed for one parcel, and what the platform kept.
+ *
+ * Absent from `SubOrder` on purpose — it is nobody's business on a
+ * customer-facing screen. This is the merchant's and staff's view of the same
+ * document, so the two cannot be confused for one another.
+ *
+ * `commissionRate` is the rate agreed *at the time of sale*, stored rather
+ * than looked up: renegotiating a shop's rate must not restate what it earned
+ * on parcels it has already shipped.
+ */
+export interface SubOrderEarnings {
+  commissionRate: number;
+  commissionAmount: number;
+  /** Subtotal − commission + delivery, which is passed through in full. */
+  vendorEarning: number;
+}
+
+/** Where one parcel's money has got to on its way to the shop's bank. */
+export const PAYOUT_STATES = [
+  "PENDING",
+  "PAYABLE",
+  "PROCESSING",
+  "PAID",
+  "REVERSED",
+] as const;
+export type PayoutState = (typeof PAYOUT_STATES)[number];
+
+/** A sub-order as its own shop and as staff see it. */
+export interface SellerSubOrder extends SubOrder {
+  earnings: SubOrderEarnings;
+  payoutState: PayoutState;
+  payout: string | null;
+}
+
+export interface SubOrderPage {
+  data: SellerSubOrder[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
+export const emptySubOrderPage = (limit: number): SubOrderPage => ({
+  data: [],
+  pagination: { page: 1, limit, total: 0, pages: 0 },
+});
+
+/** The shop's and the platform's order queue, as the UI thinks about it. */
+export interface SubOrderFilters {
+  status: OrderStatus | null;
+  page: number;
+  limit: number;
+}
+
+/**
+ * The transitions a shop may make, and what each is called in the UI.
+ *
+ * The server owns the real rules — it rejects a move that is not allowed from
+ * the parcel's current state — so this is a menu, not a validator. Anything
+ * missing from it (`PENDING`, which is where a parcel starts) is a state a
+ * shop cannot move a parcel *to*.
+ */
+export const SUB_ORDER_ACTIONS = [
+  { status: "CONFIRMED", label: "Confirm order" },
+  { status: "PROCESSING", label: "Start packing" },
+  { status: "SHIPPED", label: "Mark shipped" },
+  { status: "DELIVERED", label: "Mark delivered" },
+] as const satisfies readonly { status: OrderStatus; label: string }[];
+
+
+export const PAYOUT_STATE_LABELS: Record<PayoutState, string> = {
+  PENDING: "Not yet owed",
+  PAYABLE: "Ready to pay",
+  PROCESSING: "Transfer in progress",
+  PAID: "Paid",
+  REVERSED: "Reversed",
+};

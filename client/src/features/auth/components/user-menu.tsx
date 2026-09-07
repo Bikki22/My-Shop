@@ -49,8 +49,26 @@ export function UserMenu() {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Merchant before staff, and both can show: an admin who also runs a
+          shop has two genuinely different places to be. `MERCHANT_ROLES`
+          includes the admin roles, so the gate is narrowed to the one role
+          that has a shop of its own. */}
+      <RoleGate roles={["MERCHANT"]}>
+        <Button
+          render={<Link href={routes.seller.root} />}
+          variant="ghost"
+          size="sm"
+        >
+          My shop
+        </Button>
+      </RoleGate>
+
       <RoleGate roles={ADMIN_ROLES}>
-        <Button render={<Link href={routes.admin} />} variant="ghost" size="sm">
+        <Button
+          render={<Link href={routes.admin.root} />}
+          variant="ghost"
+          size="sm"
+        >
           Admin
         </Button>
       </RoleGate>

@@ -55,3 +55,24 @@ export const pluralize = (
   singular: string,
   plural = `${singular}s`,
 ): string => `${String(count)} ${count === 1 ? singular : plural}`;
+
+/**
+ * `Rs. 4.8L`, `Rs. 2.1Cr` — a headline figure that has to fit in a stat card.
+ *
+ * `en-IN` compact notation, so large amounts read in lakhs and crores the way
+ * the rest of the market quotes them, rather than as `482K`. Reserved for
+ * dashboard tiles: anywhere the exact amount matters — a cart line, an order
+ * total, a payout — must use `formatPrice`, because a shopper cannot check a
+ * rounded number against their bank statement.
+ */
+const compactPriceFormatter = new Intl.NumberFormat("en-IN", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+export const formatCompactPrice = (value: number): string =>
+  `Rs. ${compactPriceFormatter.format(value)}`;
+
+/** `13%` — a stored commission rate (`0.13`) as a percentage. */
+export const formatRate = (rate: number): string =>
+  `${(rate * 100).toFixed(rate * 100 % 1 === 0 ? 0 : 1)}%`;

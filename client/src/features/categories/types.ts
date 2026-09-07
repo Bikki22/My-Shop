@@ -14,3 +14,12 @@ export interface Category {
   createdAt: string;
   updatedAt: string;
 }
+
+/** What the category form submits. Mirrors `createCategoryBodySchema`. */
+export interface CategoryInput {
+  name: string;
+  description: string;
+  /** Absolute URL, or `null` for none. */
+  image: string | null;
+  isActive: boolean;
+}

@@ -37,3 +37,25 @@ export const emptyPage = <T>(limit: number): Paginated<T> => ({
   prevPage: null,
   nextPage: null,
 });
+
+/**
+ * The other page envelope, used by every list endpoint except the
+ * catalogue: `{ data, pagination }`.
+ *
+ * Two shapes exist because the server's product module pages with
+ * `mongoose-aggregate-paginate-v2` (which defines `docs`/`totalDocs`)
+ * while the modules written later hand-roll a `skip`/`limit` count. Both
+ * are modelled here rather than normalised in the client, so a response
+ * that changes shape on the server is a type error rather than a page of
+ * `undefined`.
+ */
+export interface Page<T> {
+  data: T[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
+/** A well-formed empty `Page`, for the fallback when a list read fails. */
+export const emptyResultPage = <T>(limit: number): Page<T> => ({
+  data: [],
+  pagination: { page: 1, limit, total: 0, pages: 0 },
+});

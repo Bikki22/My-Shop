@@ -1,5 +1,11 @@
 import type { RequestOptions } from "@/lib/api";
-import type { CreateOrderInput, OrderFilters } from "../types";
+import type {
+  CreateOrderInput,
+  OrderFilters,
+  OrderStatus,
+  PaymentStatus,
+  SubOrderFilters,
+} from "../types";
 
 /**
  * Endpoint paths for the server's `/api/v1/orders` router, kept in one place
@@ -83,4 +89,84 @@ export const cancelSubOrderRequest = (
   path: orderEndpoints.cancelSubOrder(subOrderId),
   method: "PATCH",
   body: reason ? { reason } : {},
+});
+
+/** The shop's and the platform's queues, beyond a customer's own history. */
+export const orderQueueEndpoints = {
+  vendor: "/orders/vendor",
+  vendorSubOrder: (subOrderId: string) => `/orders/vendor/${subOrderId}`,
+  adminOrders: "/orders/admin",
+  adminSubOrders: "/orders/admin/sub-orders",
+  adminOrder: (id: string) => `/orders/admin/${id}`,
+} as const;
+
+/**
+ * A shop's own parcel queue.
+ *
+ * There is no `vendor` parameter, and supplying one would not help: the
+ * server overrides it with the caller's own shop id, so a merchant cannot
+ * read another shop's queue.
+ */
+export const listVendorSubOrdersRequest = (
+  filters: SubOrderFilters,
+): Request => ({
+  path: orderQueueEndpoints.vendor,
+  method: "GET",
+  searchParams: {
+    page: filters.page,
+    limit: filters.limit,
+    status: filters.status ?? undefined,
+    sort: "newest",
+  },
+});
+
+export const getVendorSubOrderRequest = (subOrderId: string): Request => ({
+  path: orderQueueEndpoints.vendorSubOrder(subOrderId),
+  method: "GET",
+});
+
+/**
+ * Moving a parcel along.
+ *
+ * `courier`/`trackingNumber` are only accepted alongside `SHIPPED` — the
+ * server rejects them elsewhere rather than storing a tracking number against
+ * a parcel that has not left the warehouse.
+ */
+export const updateSubOrderStatusRequest = (
+  subOrderId: string,
+  body: {
+    status: OrderStatus;
+    note?: string;
+    courier?: string;
+    trackingNumber?: string;
+  },
+): Request => ({
+  path: `${orderQueueEndpoints.vendorSubOrder(subOrderId)}/status`,
+  method: "PATCH",
+  body,
+});
+
+/** Every order on the marketplace, for staff. */
+export const listAdminOrdersRequest = (filters: {
+  page: number;
+  limit: number;
+  status?: OrderStatus | null;
+  paymentStatus?: PaymentStatus | null;
+  orderNumber?: string;
+}): Request => ({
+  path: orderQueueEndpoints.adminOrders,
+  method: "GET",
+  searchParams: {
+    page: filters.page,
+    limit: filters.limit,
+    status: filters.status ?? undefined,
+    paymentStatus: filters.paymentStatus ?? undefined,
+    orderNumber: filters.orderNumber || undefined,
+    sort: "newest",
+  },
+});
+
+export const getAdminOrderRequest = (id: string): Request => ({
+  path: orderQueueEndpoints.adminOrder(id),
+  method: "GET",
 });

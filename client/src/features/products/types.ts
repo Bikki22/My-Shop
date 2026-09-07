@@ -93,3 +93,35 @@ export interface ProductFilters {
   page: number;
   limit: number;
 }
+
+/**
+ * What the listing form submits. Mirrors `createProductBodySchema`.
+ *
+ * `vendor` and `owner` are absent on purpose — the server takes both from
+ * the session. So is `ratingCount`, which is derived. What is left is
+ * exactly the set of fields a merchant is allowed to decide.
+ */
+export interface ProductInput {
+  categoryId: string;
+  name: string;
+  description: string;
+  brand: string;
+  /** At least one, at most eight. Absolute URLs, not files. */
+  images: string[];
+  price: number;
+  stock: number;
+  tags: string[];
+  isFeatured: boolean;
+}
+
+/** The limits the server enforces, restated so the form can too. */
+export const PRODUCT_LIMITS = {
+  nameMin: 3,
+  nameMax: 50,
+  descriptionMin: 10,
+  imagesMin: 1,
+  imagesMax: 8,
+} as const;
+
+/** At or below this many units the shop's dashboard calls a listing low. */
+export const LOW_STOCK_THRESHOLD = 5;

@@ -6,7 +6,7 @@ import express from "express";
 import type { Express, NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 
-import { corsOrigins, env, isProduction } from "./config/env.js";
+import { corsOrigins, isProduction } from "./config/env.js";
 // routes
 import adminRoutes from "./modules/admin/admin.routes.js";
 import cartRoutes from "./modules/cart/cart.routes.js";
