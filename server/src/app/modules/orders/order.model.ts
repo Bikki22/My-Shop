@@ -300,6 +300,10 @@ orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
 orderSchema.index({ paymentStatus: 1, createdAt: -1 });
 
+// The admin dashboard's date windows, which run on `placedAt` — see the
+// matching note on `SubOrder` for why that field and not `createdAt`.
+orderSchema.index({ placedAt: -1 });
+
 // A product's sales history is answered from `SubOrder` now — that is
 // where the lines live, and its `items.productId` index covers it.
 

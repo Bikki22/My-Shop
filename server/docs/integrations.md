@@ -320,3 +320,99 @@ Refuses the upload when it would push the product past
 The matching `PATCH /api/v1/products/:id/images/remove` now also deletes
 the asset from Cloudinary after the document is saved — previously it
 dropped the URL and left the file behind.
+
+---
+
+## Admin module
+
+`modules/admin/` — the dashboard aggregates behind `design/super-admin.html`
+and `design/admin-dashboard.html`. Read-only: it owns no collection and
+writes nothing, it only aggregates over `SubOrder`, `Vendor`, `Product` and
+`User`.
+
+Everything else admin-shaped already existed as `requireAdmin` routes on the
+module that owns the data (users, vendors, products, orders, payouts). This
+module is only the part that has no natural owner — figures that cut across
+all of them.
+
+### Endpoints
+
+All under `/api/v1/admin`, all requiring a session.
+
+| Endpoint | Who | Returns |
+| --- | --- | --- |
+| `GET /overview` | `ADMIN`, `SUPER_ADMIN` | Platform stat cards |
+| `GET /revenue` | `ADMIN`, `SUPER_ADMIN` | Platform sales, bucketed |
+| `GET /me/overview` | The owner of a shop | That shop's stat cards |
+| `GET /me/sales` | The owner of a shop | That shop's sales, bucketed |
+
+The `/me` pair carries no role guard on purpose: the shop is resolved from
+`req.user`, so a customer gets a `403` from the service rather than a
+glimpse of anyone else's numbers.
+
+### Query
+
+```
+?range=7d|30d|90d|365d        default 30d
+?from=2026-02-01&to=2026-02-28  overrides range; both or neither, max 400 days
+?interval=day|month           timeseries only; default day, month past 90d
+```
+
+Dates are plain calendar days, not instants — they are anchored to midnight
+in `ANALYTICS_TIMEZONE`, and `to` is inclusive of the whole day it names.
+
+```bash
+curl http://localhost:8000/api/v1/admin/overview?range=7d \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+### What the numbers mean
+
+These definitions are the part worth agreeing on before the frontend reads
+them, because each has a defensible alternative:
+
+- **`gmv`** is the goods subtotal only — before delivery and tax. Shipping
+  is a courier's money passing through and tax is the state's, so counting
+  either would inflate the figure without selling anything. `shipping`,
+  `tax` and `discount` are reported alongside it, so a caller that wants a
+  gross-receipts number can add them itself.
+- **A sale is any sub-order that is not `CANCELLED`.** Deliberately *not*
+  narrowed to `paymentStatus: PAID`: cash on delivery is paid at the door,
+  so that filter would erase most of the marketplace's revenue from its own
+  dashboard. What has actually reached a bank is the `payouts` block.
+- **`orders` counts distinct customer baskets**, `subOrders` counts vendor
+  parcels. A basket split across three shops is one order and three
+  sub-orders; `averageOrderValue` divides by the former.
+- **`payouts` is all-time, not windowed.** "What do we owe?" is a question
+  about now — a 30-day window would hide exactly the debts that have been
+  outstanding longest.
+- **`fulfilment` is the open worklist**, also unwindowed: `PENDING`,
+  `CONFIRMED`, `PROCESSING`, `SHIPPED`.
+- **`catalogue.outOfStock` and `catalogue.lowStock` never overlap.** Zero
+  stock is a different problem from `1..LOW_STOCK_THRESHOLD` (5, in
+  `product.model.ts`), and summing them would hide the first inside the
+  second.
+
+`design/super-admin.html` also shows an "Open disputes" card. There is no
+dispute model yet, so no endpoint reports one.
+
+### Time
+
+`ANALYTICS_TIMEZONE` (default `Asia/Kathmandu`) is the single zone every
+figure is measured in — both the `$dateToString` bucketing Mongo does and
+the "start of today" Node computes read it, so a stat card and the chart
+beside it cannot disagree about where a day ends. At UTC+05:45 this is not
+cosmetic: bucketing in UTC files every order placed after 18:15 local under
+the previous day.
+
+Timeseries responses are gap-filled — every bucket in the range comes back,
+including the empty ones. A chart drawn only from the rows Mongo returned
+skips its quiet days, which slides every later point left and turns a flat
+week into a rising one.
+
+### Indexes
+
+The pipelines window on `placedAt` (the business fact) rather than
+`createdAt`, and no existing index started with it, so three were added:
+`SubOrder{placedAt}`, `SubOrder{vendor, placedAt}` and `Order{placedAt}`.
+Without them every dashboard load is a collection scan.

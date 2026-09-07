@@ -8,6 +8,20 @@ import { z } from "zod";
  * request that happens to need it. Import `env` instead of touching
  * `process.env` directly so the types stay honest.
  */
+/**
+ * Whether the runtime recognises an IANA zone name. `Intl` is the only
+ * authority available without pulling in a timezone database, and it
+ * throws on an unknown zone rather than returning a flag.
+ */
+const isValidTimeZone = (zone: string): boolean => {
+  try {
+    void Intl.DateTimeFormat("en-CA", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -31,6 +45,23 @@ const envSchema = z.object({
 
   /** Comma-separated list of browser origins allowed to call the API. */
   CORS_ORIGINS: z.string().optional().default("http://localhost:5173"),
+
+  /**
+   * The IANA zone the admin dashboards bucket days in.
+   *
+   * Nepal runs at UTC+05:45, so bucketing in UTC would file most of every
+   * evening's orders under the previous day and leave "orders today" wrong
+   * until lunchtime. Every `$dateToString` in the analytics pipelines and
+   * every "start of today" the service computes read this one value, so a
+   * stat card and the chart beside it cannot disagree about where a day
+   * ends.
+   */
+  ANALYTICS_TIMEZONE: z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "Not a recognised IANA time zone")
+    .optional()
+    .default("Asia/Kathmandu"),
 
   /**
    * Marketplace economics. These were literals inside the checkout; they

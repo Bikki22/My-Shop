@@ -8,6 +8,7 @@ import helmet from "helmet";
 
 import { corsOrigins, env, isProduction } from "./config/env.js";
 // routes
+import adminRoutes from "./modules/admin/admin.routes.js";
 import cartRoutes from "./modules/cart/cart.routes.js";
 import categoryRoutes from "./modules/category/category.routes.js";
 import orderRoutes from "./modules/orders/order.routes.js";
@@ -50,6 +51,7 @@ export function createApplication(): Express {
   app.use("/api/v1/orders", orderRoutes);
   app.use("/api/v1/payments", paymentRoutes);
   app.use("/api/v1/payouts", payoutRoutes);
+  app.use("/api/v1/admin", adminRoutes);
 
   // Unmatched routes: answer in the same JSON shape as every other error
   // instead of Express's default HTML 404, which breaks API clients.

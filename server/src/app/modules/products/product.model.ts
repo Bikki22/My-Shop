@@ -7,6 +7,17 @@ import mongoose, {
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 /**
+ * At or below this many units a listing is reported as "low stock" on the
+ * vendor's dashboard — the point at which restocking is worth a nudge, not
+ * an emergency.
+ *
+ * Zero is deliberately *not* low stock: a listing nobody can buy is a
+ * different problem with a different fix, and the dashboard counts the two
+ * separately so one cannot hide inside the other.
+ */
+export const LOW_STOCK_THRESHOLD = 5;
+
+/**
  * The persisted shape only. It deliberately does not extend `Document` —
  * that is what `HydratedDocument` is for, and mixing the two makes
  * `Partial<IProduct>` include every mongoose method.

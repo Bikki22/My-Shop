@@ -231,6 +231,14 @@ subOrderSchema.index({ vendor: 1, payoutState: 1 });
 // The platform-wide fulfilment queue.
 subOrderSchema.index({ status: 1, createdAt: -1 });
 
+// The analytics pipelines, which window on `placedAt` rather than
+// `createdAt`: the two are set together today, but `placedAt` is the
+// business fact ("when was this sold") and is what a backfilled or
+// migrated order would carry. Neither index above starts with it, so
+// without these every dashboard load is a collection scan.
+subOrderSchema.index({ placedAt: -1 });
+subOrderSchema.index({ vendor: 1, placedAt: -1 });
+
 // A stock audit, and "which shops sold this product".
 subOrderSchema.index({ "items.productId": 1 });
 
