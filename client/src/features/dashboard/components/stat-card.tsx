@@ -2,23 +2,25 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * One figure from a dashboard, in the stat-tile contract: a label in sentence
- * case, the value, and an optional line of context under it.
+ * One figure from a dashboard, in the ledger-tile shape the console mockups
+ * use: the label and an optional pill across the top, the figure set in mono
+ * beneath it, and a line of context under that.
  *
  * The value is passed pre-formatted rather than as a number plus a format
  * flag — some tiles are money, some are counts, and one is a percentage, and
  * a component that branched on which would end up owning formatting rules
  * that belong in `lib/format.ts`.
  *
- * Figures are deliberately *not* `tabular-nums`: that gives every digit the
- * width of a `0`, which reads loose at display sizes. Tabular figures are for
- * columns that must align vertically — the tables, and the chart's axis.
+ * Mono *is* tabular here, unlike the storefront's prices: these tiles sit in
+ * a row of four and the mockups line their digits up like a column of
+ * accounts.
  */
 export function StatCard({
   label,
   value,
   hint,
   tone = "default",
+  tag,
   className,
 }: {
   label: string;
@@ -30,24 +32,49 @@ export function StatCard({
    * colour change, never colour alone: the label already says what it is.
    */
   tone?: "default" | "attention";
+  /**
+   * The small pill beside the label — a unit or cadence that would otherwise
+   * bloat the label itself ("NPR", "Weekly", "Live").
+   */
+  tag?: { label: string; tone?: "neutral" | "brand" | "success" | "danger" };
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 rounded-xl bg-card px-4 py-3.5 ring-1 ring-foreground/10",
+        "flex flex-col gap-2 rounded-xl border border-border bg-card px-5 py-4",
         className,
       )}
     >
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-muted-foreground">
+          {label}
+        </span>
+        {tag ? (
+          <span
+            className={cn(
+              "shrink-0 rounded-md px-1.5 py-0.5 text-[0.625rem] font-semibold",
+              tag.tone === "brand" && "bg-brand-soft text-brand-soft-foreground",
+              tag.tone === "success" && "bg-success-soft text-success",
+              tag.tone === "danger" && "bg-danger-soft text-danger",
+              (tag.tone ?? "neutral") === "neutral" &&
+                "bg-muted text-muted-foreground",
+            )}
+          >
+            {tag.label}
+          </span>
+        ) : null}
+      </div>
+
       <span
         className={cn(
-          "font-heading text-2xl leading-tight font-semibold tracking-tight",
-          tone === "attention" && "text-destructive",
+          "font-mono text-[1.625rem] leading-none font-semibold tracking-tight",
+          tone === "attention" && "text-danger",
         )}
       >
         {value}
       </span>
+
       {hint ? (
         <span className="text-xs text-muted-foreground">{hint}</span>
       ) : null}
@@ -72,7 +99,7 @@ export function StatGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-3 lg:grid-cols-4",
+        "grid grid-cols-2 gap-4 lg:grid-cols-4",
         // Dimmed by the caller while a new range loads, so a refresh reads as
         // "catching up" rather than as the answer.
         className,

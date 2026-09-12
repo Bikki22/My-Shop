@@ -4,12 +4,26 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/**
+ * The Bazaar design system, as drawn in `/design`.
+ *
+ * The palette is a market stall rendered in print: unbleached paper, ink,
+ * and three dyes — marigold, teal and rust — that each carry one meaning
+ * and are never swapped around. Marigold is the brand and the "look here";
+ * teal means settled, verified, delivered; rust means money leaving, stock
+ * running out, an order cancelled.
+ *
+ * Colours are hex rather than oklch because the mockups are hex and a
+ * storefront palette is worth being able to eyeball against them.
+ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-fraunces);
+  --font-mono: var(--font-jetbrains);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,6 +53,29 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* The three dyes, plus the tinted grounds they sit on. Exposed as real
+     utilities (`bg-brand`, `text-success`, `bg-danger-soft`) so a feature
+     never reaches for a raw hex. */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-foreground: var(--brand-soft-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  /* The navy the footer, the auth panel and the payout strip are cut from. */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+
+  /* A touch cooler and flatter than `background` — the dashboards' ground,
+     so a console reads as a workspace rather than as the shop. */
+  --color-workbench: var(--workbench);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -49,72 +86,141 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #f7f6f2;
+  --foreground: #1b2130;
+  --card: #ffffff;
+  --card-foreground: #1b2130;
+  --popover: #ffffff;
+  --popover-foreground: #1b2130;
+  --primary: #181c2a;
+  --primary-foreground: #ffffff;
+  --secondary: #efeee8;
+  --secondary-foreground: #1b2130;
+  --muted: #efeee8;
+  --muted-foreground: #6b7080;
+  --accent: #fbebd1;
+  --accent-foreground: #9c6a17;
+  --destructive: #c6543d;
+  --border: #e7e4dc;
+  --input: #e7e4dc;
+  --ring: #e8a33d;
+
+  --brand: #e8a33d;
+  --brand-foreground: #181c2a;
+  --brand-soft: #fbebd1;
+  --brand-soft-foreground: #9c6a17;
+  --success: #2a8c7f;
+  --success-soft: #dcefec;
+  --danger: #c6543d;
+  --danger-soft: #f7e1dc;
+
+  --ink: #181c2a;
+  --ink-soft: #232841;
+  --ink-foreground: #edeef5;
+  --ink-muted: #9195ac;
+
+  --workbench: #f5f6fa;
+
+  /* Marigold first, then ink: the mockups' revenue chart tints the older
+     half of the series and inks the recent half. */
+  --chart-1: #e8a33d;
+  --chart-2: #1b2130;
+  --chart-3: #2a8c7f;
+  --chart-4: #c6543d;
+  --chart-5: #9d7fe8;
+
+  --radius: 0.75rem;
+
+  --sidebar: #181c2a;
+  --sidebar-foreground: #c3c6da;
+  --sidebar-primary: #e8a33d;
+  --sidebar-primary-foreground: #181c2a;
+  --sidebar-accent: #232841;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #ffffff1a;
+  --sidebar-ring: #e8a33d;
 }
 
+/**
+ * Dark is the platform console's palette from `platform-admin.html` — a
+ * near-black ground with lifted panels, rather than an inversion of the
+ * paper. The dyes brighten so they survive the darker ground.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0b0d12;
+  --foreground: #e7e9f0;
+  --card: #12151d;
+  --card-foreground: #e7e9f0;
+  --popover: #171b25;
+  --popover-foreground: #e7e9f0;
+  --primary: #e8a33d;
+  --primary-foreground: #181c2a;
+  --secondary: #1b2029;
+  --secondary-foreground: #e7e9f0;
+  --muted: #1b2029;
+  --muted-foreground: #7c8399;
+  --accent: #232837;
+  --accent-foreground: #f0a63a;
+  --destructive: #e5584d;
+  --border: #232837;
+  --input: #232837;
+  --ring: #e8a33d;
+
+  --brand: #f0a63a;
+  --brand-foreground: #12151d;
+  --brand-soft: #2a2213;
+  --brand-soft-foreground: #f0a63a;
+  --success: #3fc98a;
+  --success-soft: #12291f;
+  --danger: #e5584d;
+  --danger-soft: #2c1716;
+
+  --ink: #12151d;
+  --ink-soft: #171b25;
+  --ink-foreground: #e7e9f0;
+  --ink-muted: #7c8399;
+
+  --workbench: #0b0d12;
+
+  --chart-1: #f0a63a;
+  --chart-2: #4fb8e8;
+  --chart-3: #3fc98a;
+  --chart-4: #e5584d;
+  --chart-5: #9d7fe8;
+
+  --sidebar: #12151d;
+  --sidebar-foreground: #a8adbe;
+  --sidebar-primary: #f0a63a;
+  --sidebar-primary-foreground: #12151d;
+  --sidebar-accent: #1b2029;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #232837;
+  --sidebar-ring: #f0a63a;
+}
+
+/**
+ * The diagonal weave behind the hero and the auth panel — the warp threads
+ * of a loom, at the angle the mockups use. Faint on purpose: it should read
+ * as texture in the paper, not as stripes.
+ */
+@utility bg-weave {
+  background-image: repeating-linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--brand) 7%, transparent) 0 2px,
+    transparent 2px 34px
+  );
+}
+
+/**
+ * Ruled lines, like a bound ledger page. The dashboards sit on this — it is
+ * what makes a console of figures read as a book of accounts.
+ */
+@utility bg-ledger {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 27px,
+    color-mix(in srgb, var(--foreground) 4.5%, transparent) 28px
+  );
 }
 
 @layer base {
@@ -126,5 +232,23 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /**
+   * Fraunces is an optical-size variable serif: at display sizes it wants
+   * its high-contrast, tighter-spaced cut. `opsz` is set from the rendered
+   * size so a 46px hero and a 16px panel title each get the right one.
+   */
+  .font-heading {
+    font-variation-settings: "opsz" 48;
+  }
+
+  /**
+   * Money and counts are set in mono throughout, per the mockups — a price
+   * is a figure to be compared, not prose. Slashed zero keeps an amount
+   * unambiguous on a receipt.
+   */
+  .font-mono {
+    font-variant-numeric: tabular-nums slashed-zero;
   }
 }

@@ -1,17 +1,36 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import { AppProviders } from "@/components/providers";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * Three faces, three jobs — the split the `/design` mockups make everywhere.
+ *
+ * Fraunces is the voice: headings, the brand mark, panel titles. Inter is
+ * the interface. JetBrains Mono carries every figure — prices, totals, order
+ * ids, SKUs — because those are meant to be compared down a column, not read
+ * as a sentence.
+ */
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
+  // Fraunces is optical-size variable; `globals.css` sets `opsz` per use so
+  // display sizes get the high-contrast cut and small titles do not.
+  axes: ["opsz"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,9 +46,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-full flex-col">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

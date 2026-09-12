@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
 import {
+  BanknoteIcon,
+  LayoutDashboardIcon,
+  PackageIcon,
+  SettingsIcon,
+  ShoppingBagIcon,
+} from "lucide-react";
+import {
   DashboardNav,
   type DashboardLink,
 } from "@/components/layout/dashboard-nav";
@@ -25,25 +32,35 @@ export const metadata: Metadata = {
  * in any of these URLs to point somewhere else.
  */
 const LINKS: readonly DashboardLink[] = [
-  { href: routes.seller.root, label: "Dashboard", exact: true },
-  { href: routes.seller.products, label: "Products" },
-  { href: routes.seller.orders, label: "Orders" },
-  { href: routes.seller.payouts, label: "Payouts" },
-  { href: routes.seller.settings, label: "Shop settings" },
+  {
+    href: routes.seller.root,
+    label: "Dashboard",
+    icon: <LayoutDashboardIcon />,
+    exact: true,
+  },
+  { href: routes.seller.products, label: "Products", icon: <PackageIcon /> },
+  { href: routes.seller.orders, label: "Orders", icon: <ShoppingBagIcon /> },
+  { href: routes.seller.payouts, label: "Payouts", icon: <BanknoteIcon /> },
+  {
+    href: routes.seller.settings,
+    label: "Shop settings",
+    icon: <SettingsIcon />,
+  },
 ];
 
 export default async function SellerLayout({ children }: LayoutProps<"/">) {
   await requireMerchant();
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8">
-      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-        <DashboardNav
-          links={LINKS}
-          label="Shop"
-          className="lg:w-48 lg:shrink-0"
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-6">{children}</div>
+    <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[15.5rem_1fr]">
+      <DashboardNav links={LINKS} label="Shop" subtitle="Vendor console" />
+
+      {/* The ruled ground from the mockups — a console of figures reading as
+          a book of accounts. */}
+      <div className="min-w-0 bg-workbench bg-ledger">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 lg:px-8">
+          {children}
+        </div>
       </div>
     </div>
   );
